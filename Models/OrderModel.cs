@@ -1,0 +1,19 @@
+using System;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace WebShoppingAPI.Models;
+
+public class OrderModel
+{
+    public Guid Id { get; set; }
+    public DateTime OrderDate { get; set; }
+    public DateTime ExpiredPaidTime { get; set; }
+    public bool IsPaid { get; set; }
+    public string? Status { get; set; } //สำเร็จ,อยู่ระหว่างขนส่ง,ยกเลิก,ฯลฯ
+    public string? TransportInfo { get; set; } //เก็บพวกรหัสค้นหามั้ง
+
+    public Guid UserId { get; set; }
+    [ForeignKey("UserId")]
+    public UserModel? Users { get; set; }
+    public ICollection<OrderProductModel> OrderProducts { get; set; } = new List<OrderProductModel>();
+}

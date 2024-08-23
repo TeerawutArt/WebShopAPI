@@ -1,0 +1,26 @@
+﻿
+using System.ComponentModel.DataAnnotations;
+
+
+namespace WebShoppingAPI.DTOs.Request;
+
+public class UpdateUserDTO
+{
+
+    public IFormFile? UserImage { get; set; }
+
+
+    [Required(ErrorMessage = "กรุณากรอกชื่อจริง")]
+    public required string FirstName { get; set; }
+    [Required(ErrorMessage = "กรุณากรอกนามสกุล")]
+    public required string LastName { get; set; }
+
+
+    [Required(ErrorMessage = "กรุณากรอกอีเมล"), EmailAddress(ErrorMessage = "รูปแบบอีเมลไม่ถูกต้อง")]
+    public required string Email { get; set; }
+
+    [Required(ErrorMessage = "กรุณาเบอร์โทรศัพท์")]
+    public required string PhoneNumber { get; set; }
+
+
+}

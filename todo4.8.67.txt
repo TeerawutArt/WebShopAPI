@@ -1,0 +1,13 @@
+4/8/67
+1.แก้ดาต้าเบส ให้เป็นแบบ relationship
+2.เพิ่มลบ reviewComment
+3.ปรับปรุง reviewscore
+4.หัดใช้ foreach ในการจัดการดาต้า (เสร็จแล้วใช้ ef แทน)
+
+
+21/8/67
+1.แก้บัค ตรง product update ไม่ยอมลบ category เก่าออก เมื่อทำการอัปเดท (เสร็จแล้ว)
+
+22/8/67
+1. เพิ่มการจัดการ Address ใน AccountsController
+2. เพิ่มจำนวน max Address ใน AppSetting
