@@ -49,7 +49,7 @@ FileService fileService, IConfiguration iConfiguration, AppDbContext appDbContex
             var errors = result.Errors.Select(e => e.Description);
             return BadRequest(new { Errors = errors });
         }
-        //ทุก user จะเป็น role Customer ก่อนเสมอ
+        //ทุก user เมื่อสร้างใหม่ จะเป็น role Customer ก่อนเสมอ
         try
         {
             await _userManager.AddToRoleAsync(newUser, "Customer");
@@ -154,7 +154,7 @@ FileService fileService, IConfiguration iConfiguration, AppDbContext appDbContex
             Email = user.Email,
             PhoneNumber = user.PhoneNumber,
             Blocked = user.Blocked,
-            //วิธี Projection (chatบอกวิธีนี้ดีสุดแล้ว SelectMany เอามาแค่ที่ต้องการ Include เอามาหมด ในแง่ของการดึงข้อมูลมาบางส่วน) 
+            //วิธี Projection ( SelectMany เอามาแค่ที่ต้องการ Include เอามาหมด ในแง่ของการดึงข้อมูลมาบางส่วน) 
             Addresses = _userManager.Users.Where(u => u.Id == user.Id).SelectMany(a => a.Addresses).Select(a => new AddressDTO
             {
                 AddressId = a.Id,
@@ -236,7 +236,7 @@ FileService fileService, IConfiguration iConfiguration, AppDbContext appDbContex
             var addressCount = _appDbContext.Addresses.Count(a => a.UserId == user.Id);
             if (addressCount >= maxAllowAddress)
             {
-                var errors = new[] { "จำนวนที่อยู่ที่สร้างได้ต้องไม่เกิน " + maxAllowAddress };
+                var errors = new[] { "ที่อยู่ที่สร้างได้ต้องไม่เกิน " + maxAllowAddress };
                 return BadRequest(new { Errors = errors });
             }
             var newAddress = new AddressModel

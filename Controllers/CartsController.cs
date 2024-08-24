@@ -91,7 +91,7 @@ public class CartsController(AppDbContext appDbContext, UserManager<UserModel> u
                 ProductPrice = p.Product!.Price,
                 Quantity = p.Quantity
             }).ToList();
-            return Ok(cartItem);
+            return Ok(cart);
         }
         catch (Exception ex)
         {

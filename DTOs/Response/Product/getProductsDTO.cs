@@ -6,7 +6,7 @@ namespace WebShoppingAPI.DTOs.Response;
 public class GetProductsDTO
 {
     public bool OnlyMyItem { get; set; }
-    public bool ExpireProduct { get; set; }
+    public bool AvailableProduct { get; set; }
     public string? Keyword { get; set; }
 
     [Range(1, 1000)] //กำหนดขอบเขต ของ PageIndex

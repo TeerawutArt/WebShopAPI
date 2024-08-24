@@ -56,6 +56,7 @@ public class AppDbContext : IdentityDbContext<UserModel, RoleModel, Guid>
         new RoleModel { Id = Guid.Parse("d1b172ba-4d15-4505-8de0-b43588da3359"), Name = "Customer", NormalizedName = "CUSTOMER", Description = "for Customer" }
 
     );
+        //init category 3 ประเภท (ไว้ทดสอบเล่น)
         builder.Entity<CategoryModel>().HasData(
             new CategoryModel { Id = Guid.Parse("c02885d0-8807-458c-8649-8cf3eb6ead13"), Name = "อิเล็กทรอนิกส์", NormalizedName = "ELECTRICAL", Description = "เครื่องใช้ไฟฟ้า" },
             new CategoryModel { Id = Guid.Parse("81f571d3-ccb0-4e72-be06-27a9cfc0414f"), Name = "อุปกรณ์คอมพิวเตอร์", NormalizedName = "COMPUTER", Description = "อุปกรณ์คอมพิวเตอร์" },
@@ -64,6 +65,3 @@ public class AppDbContext : IdentityDbContext<UserModel, RoleModel, Guid>
     }
 }
 
-public class OrderProductRecipeModel
-{
-}

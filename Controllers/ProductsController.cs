@@ -13,7 +13,6 @@ using WebShoppingAPI.DTOs.Response.Category;
 namespace WebShoppingAPI.Controllers;
 
 [ApiController]
-[Authorize]
 [Route("[Controller]")]
 [Consumes("application/json")]
 [Produces("application/json")]
@@ -30,30 +29,29 @@ public class ProductsController(AppDbContext appDbContext, FileService fileServi
 
 
     [HttpGet]
-    [Authorize]
     public async Task<IActionResult> GetProducts([FromQuery] GetProductsDTO req)
     {
         try
         {
             var query = _appDbContext.Products.AsQueryable();
             var curDate = DateTime.UtcNow;
-            var curUserId = User.FindFirstValue("uid");
-            UserModel? user = await userManager.FindByIdAsync(curUserId!);
 
-            if (req.OnlyMyItem)
+            var curUserId = User.FindFirstValue("uid");
+            if (curUserId is not null && req.OnlyMyItem)
             {
+                UserModel? user = await userManager.FindByIdAsync(curUserId!);
                 query = query.Where(e => e.UserId == user!.Id);
+                var userRole = await userManager.GetRolesAsync(user!);
+                //ตรวจสอบ Product ว่ามีอยู่ไหม (role customer ไม่โชว์ หรือติ้กไม่โชว์)
+                if (userRole.Any(role => role == "Customer") || !req.AvailableProduct)
+                {
+                    query = query.Where(e => e.IsAvailable == false);
+                }
             }
             if (!string.IsNullOrWhiteSpace(req.Keyword)) //IsNullOrWhiteSpace คือ ไม่เอา spacebar ด้วย
             {
                 query = query.Where(e => e.Name.ToLower().Contains(req.Keyword.ToLower())  //Contains มีอักษรบางส่วน
                 || e.Description!.ToLower().Contains(req.Keyword.ToLower()));
-            }
-            //ตรวจสอบวันสิ้นสุดกิจกรรม (role customer ไม่โชว์ หรือติ้กไม่โชว์)
-            var userRole = await userManager.GetRolesAsync(user!);
-            if (userRole.Any(role => role == "Customer") || req.ExpireProduct)
-            {
-                query = query.Where(e => e.UpdatedTime >= curDate);
             }
             var totalRecords = await query.CountAsync(); //นับค่าจาก query ทั้งหมด
             var pageIndex = req.PageIndex;
@@ -68,8 +66,8 @@ public class ProductsController(AppDbContext appDbContext, FileService fileServi
                 ProductTotalAmount = row.TotalAmount,
                 ProductCreatedBy = row.CreatedBy,
                 ProductUpdatedBy = row.UpdatedBy,
-                CreatedTime = row.CreatedTime,
-                UpdatedTime = row.UpdatedTime,
+                ProductCreatedTime = row.CreatedTime,
+                ProductUpdatedTime = row.UpdatedTime,
                 Price = row.Price,
                 TotalScore = row.TotalScore,
                 IsAvailable = row.IsAvailable,
@@ -89,8 +87,8 @@ public class ProductsController(AppDbContext appDbContext, FileService fileServi
             //แปลงเวลากลับจาก UTC กลับเป็น locale
             foreach (var item in res.Items)
             {
-                item.CreatedTime = TimeZoneInfo.ConvertTimeFromUtc(item.CreatedTime, localeTimeZone);
-                item.UpdatedTime = TimeZoneInfo.ConvertTimeFromUtc(item.UpdatedTime, localeTimeZone);
+                item.ProductCreatedTime = TimeZoneInfo.ConvertTimeFromUtc(item.ProductCreatedTime, localeTimeZone);
+                item.ProductUpdatedTime = TimeZoneInfo.ConvertTimeFromUtc(item.ProductUpdatedTime, localeTimeZone);
             }
 
             return Ok(res);
@@ -171,7 +169,7 @@ public class ProductsController(AppDbContext appDbContext, FileService fileServi
         {
             var curUserId = User.FindFirstValue("uid");
             var user = await userManager.FindByIdAsync(curUserId!);
-            //ต้อง Include เพื่อเข้าถึงการใช้งาน ProductCategories ด้วย ถ้าไม่เข้าถึงจะทำงานไม่ถูกต้อง กรณีนี้คือใช้ RemoveRange ไม่ได้
+            //ต้อง Include เพื่อเข้าถึงการใช้งาน ProductCategories ด้วย 
             var curProduct = await _appDbContext.Products.Include(p => p.ProductCategories).FirstOrDefaultAsync(x => x.Id == id && x.UserId == user!.Id);
             if (curProduct == null) return NotFound();
             if (req.ProductImage is not null)

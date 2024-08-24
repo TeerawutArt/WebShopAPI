@@ -10,7 +10,6 @@ using WebShoppingAPI.DTOs.Request;
 namespace WebShoppingAPI.Controllers;
 
 [ApiController]
-[Authorize]
 [Route("[Controller]")]
 [Consumes("application/json")]
 [Produces("application/json")]
@@ -21,7 +20,6 @@ public class ReviewCommentsController(AppDbContext appDbContext, UserManager<Use
 
 
     [HttpGet]
-    [Authorize]
     public async Task<IActionResult> GetReviewComments()
     {
         try
