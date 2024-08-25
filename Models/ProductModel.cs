@@ -18,9 +18,14 @@ public class ProductModel
     public DateTime CreatedTime { get; set; }
     public DateTime UpdatedTime { get; set; }
     public double Price { get; set; }
+    public double DiscountPrice { get; set; }
     public double TotalScore { get; set; }
     public bool IsAvailable { get; set; }
 
+    //many-to-one
+    [ForeignKey("DiscountModel")]
+    public Guid? DiscountId { get; set; }
+    public DiscountModel? Discount { get; set; }
 
     //one-to-many
     public ICollection<OrderProductModel>? OrderProduct { get; set; }

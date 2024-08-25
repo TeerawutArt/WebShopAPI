@@ -19,6 +19,7 @@ var services = builder.Services;
 //add service//
 services.AddScoped<FileService>();
 services.AddScoped<TokenHelper>();
+services.AddScoped<PriceCalculateService>();
 //controller//
 services.AddControllers();
 

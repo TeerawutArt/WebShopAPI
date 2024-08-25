@@ -91,7 +91,7 @@ public class CartsController(AppDbContext appDbContext, UserManager<UserModel> u
                 ProductPrice = p.Product!.Price,
                 Quantity = p.Quantity
             }).ToList();
-            return Ok(cart);
+            return Ok(cartItem);
         }
         catch (Exception ex)
         {
@@ -99,7 +99,7 @@ public class CartsController(AppDbContext appDbContext, UserManager<UserModel> u
             return BadRequest(new { Errors = errors });
         }
     }
-    [HttpPut("{id}")]
+    [HttpPut("CartItem/product{id}")]
     [Authorize]
     public async Task<IActionResult> UpdateQuantityCartItem(Guid id, UpdateQuantityItemDTO req)
     {
@@ -121,7 +121,7 @@ public class CartsController(AppDbContext appDbContext, UserManager<UserModel> u
             return BadRequest(new { Errors = errors });
         }
     }
-    [HttpDelete("{id}")]
+    [HttpDelete("CartItem/product{id}")]
     [Authorize]
     public async Task<IActionResult> DeleteCartItem(Guid id)
     {
@@ -143,7 +143,7 @@ public class CartsController(AppDbContext appDbContext, UserManager<UserModel> u
         }
     }
 
-    [HttpDelete("Clear")]
+    [HttpDelete("CartItem/Clear")]
     [Authorize]
     public async Task<IActionResult> ClearAllCartItem()
     {

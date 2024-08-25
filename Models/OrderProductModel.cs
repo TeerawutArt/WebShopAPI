@@ -6,8 +6,8 @@ namespace WebShoppingAPI.Models;
 public class OrderProductModel
 {
     public Guid Id { get; set; }
-    [ForeignKey("OrderModel")]
-    public int OrderId { get; set; }
+    public Guid OrderId { get; set; }
+    [ForeignKey("OrderId")]
     public OrderModel? Orders { get; set; }
     //one-to-one
     [ForeignKey("ProductModel")]

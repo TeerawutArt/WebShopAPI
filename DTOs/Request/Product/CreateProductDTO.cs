@@ -13,6 +13,6 @@ public class CreateProductDTO
     [Required(ErrorMessage = "กรุณากรอกจำนวนสินค้า")]
     public string? TotalAmount { get; set; }
     public string? Price { get; set; }
-    public Guid CategoryId { get; set; }
+    public List<Guid> CategoryId { get; set; } = new List<Guid>();
 
 }

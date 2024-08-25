@@ -15,6 +15,8 @@ public class CouponModel
     public double Discount { get; set; }
     public bool IsDiscountPercent { get; set; }
     public double MaxDiscount { get; set; }
+    public double MinimumPrice { get; set; } //ราคาขั้นต่ำที่ใช้คูปองได้
+
 
     [ForeignKey("OrderModel")]
     public Guid OrderId { get; set; }

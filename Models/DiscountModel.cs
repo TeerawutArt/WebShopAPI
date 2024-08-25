@@ -10,11 +10,10 @@ public class DiscountModel
     public string? Description { get; set; }
     public DateTime StartTime { get; set; }
     public DateTime EndTime { get; set; }
-    public double Discount { get; set; }
-    public double MaxDiscount { get; set; }
+    public double DiscountRate { get; set; }
     public bool IsDiscountPercent { get; set; }
+    public bool IsDiscounted { get; set; }
 
-    [ForeignKey("ProductModel")]
-    public Guid ProductId { get; set; }
-    public ProductModel? Product { get; set; }
+    //one-to-many
+    public ICollection<ProductModel> Products { get; set; } = new List<ProductModel>();
 }

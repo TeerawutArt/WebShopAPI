@@ -12,7 +12,7 @@ public class ReviewCommentModel
     public Guid Id { get; set; }
 
 
-    public Guid ReplyCommentId { get; set; }
+    public Guid? ReplyCommentId { get; set; } //nullable
 
     public string? Title { get; set; }
     public string? Content { get; set; }

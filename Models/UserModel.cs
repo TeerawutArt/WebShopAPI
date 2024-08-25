@@ -18,6 +18,8 @@ public class UserModel : IdentityUser<Guid>
 
     public bool Blocked { get; set; }
     public ICollection<OrderModel>? Orders { get; set; } //null
+    //one to one
     public CartModel? Cart { get; set; }
+    public ReviewCommentModel? Comment { get; set; }
 
 }

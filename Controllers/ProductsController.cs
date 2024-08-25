@@ -64,11 +64,13 @@ public class ProductsController(AppDbContext appDbContext, FileService fileServi
                 ProductName = row.Name,
                 ProductDescription = row.Description,
                 ProductTotalAmount = row.TotalAmount,
+                ProductSoldAmount = row.SoldAmount,
                 ProductCreatedBy = row.CreatedBy,
                 ProductUpdatedBy = row.UpdatedBy,
                 ProductCreatedTime = row.CreatedTime,
                 ProductUpdatedTime = row.UpdatedTime,
                 Price = row.Price,
+                DiscountPrice = row.DiscountPrice,
                 TotalScore = row.TotalScore,
                 IsAvailable = row.IsAvailable,
                 Categories = row.ProductCategories.Select(pc => new CategoriesDTO
@@ -132,20 +134,27 @@ public class ProductsController(AppDbContext appDbContext, FileService fileServi
                 CreatedBy = User.FindFirstValue("name"),
                 CreatedTime = DateTime.UtcNow,
                 Price = double.Parse(req.Price!),
+                DiscountPrice = double.Parse(req.Price!),
                 UserId = user!.Id,
                 IsAvailable = true,
+
             };
             //เพิ่มลง db แล้วเซฟ เพื่อสร้าง GUID ก่อน
             _appDbContext.Products.Add(newProduct);
             await _appDbContext.SaveChangesAsync();
-            //สร้างความสัมพันธ์ many-to-many
-            var newProductCategory = new ProductCategoryModel
-            {
-                ProductId = newProduct.Id,
-                CategoryId = req.CategoryId
-            };
+            //สร้างความสัมพันธ์ many-to-many  ใช้ loop เพื่อกรณี 1 Product มีหลาย Category
 
-            _appDbContext.ProductCategories.Add(newProductCategory);
+            foreach (var categoryId in req.CategoryId)
+            {
+                var newProductCategory = new ProductCategoryModel
+                {
+                    ProductId = newProduct.Id,
+                    CategoryId = categoryId
+                };
+
+                _appDbContext.ProductCategories.Add(newProductCategory);
+
+            }
             await _appDbContext.SaveChangesAsync();
             return NoContent();
 
