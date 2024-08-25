@@ -43,3 +43,8 @@ msbuild.err
 msbuild.wrn
 Migrations
 todo.txt
+#Database 
+
+appAPI.Development.db
+appAPI.Development.db-shm
+appAPI.Development.db-wal
