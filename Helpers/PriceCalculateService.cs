@@ -16,8 +16,8 @@ public class PriceCalculateService
         else
         {
             //ลดราคามันตรงๆนี่หละ
-            double discountPrice = price - rate;
-            newPrice = discountPrice;
+            double discountPrice =  rate;
+            newPrice = price - discountPrice;
         }
         return newPrice;
     }
