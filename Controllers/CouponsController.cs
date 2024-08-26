@@ -131,8 +131,8 @@ public class CouponsController(AppDbContext appDbContext, UserManager<UserModel>
                 return BadRequest(new { Errors = errors });
             }
             //เช็คว่า Order นี้ ใช้คูปองไปแล้วหรือยัง 1 Order 1 คูปอง
-            var usedCoupon = await _appDbContext.UsedCoupons.AnyAsync(uc => uc.OrderId == id);
-            if (usedCoupon)
+            var isOrderUseCoupon = await _appDbContext.UsedCoupons.AnyAsync(uc => uc.OrderId == id);
+            if (isOrderUseCoupon)
             {
                 var errors = new[] { "รายการนี้ได้ใช้คูปองไปแล้ว" };
                 return BadRequest(new { Errors = errors });
@@ -160,7 +160,6 @@ public class CouponsController(AppDbContext appDbContext, UserManager<UserModel>
             }
 
             targetOrder.TotalPrice = _priceCalculate.DiscountPrice(targetOrder.TotalPrice, curCoupon.Discount, curCoupon.IsDiscountPercent, curCoupon.MaxDiscount);
-            /*             curCoupon.Amount -= 1; //เช็คจากจำนวนคูปองที่ใช้ไปแล้วดีกว่า */
             var useCoupon = new UsedCouponModel
             {
                 CouponId = curCoupon.Id,
@@ -169,13 +168,13 @@ public class CouponsController(AppDbContext appDbContext, UserManager<UserModel>
             };
             _appDbContext.UsedCoupons.Add(useCoupon);
             await _appDbContext.SaveChangesAsync();
-            await transaction.CommitAsync(); //ถ้าไม่ error ค่อยยืนยันการเปลี่ยนแปลง
+            await transaction.CommitAsync(); //ถ้าไม่เกิดerror ระหว่างทาง ค่อยยืนยันการเปลี่ยนแปลง
 
             return NoContent();
         }
         catch (Exception ex)
         {
-            await transaction.RollbackAsync(); //ถ้า error ย้อนกลับค่าทุกอย่างที่ track ไว้จาก  BeginTransactionAsync
+            await transaction.RollbackAsync(); //ถ้าเกิด error จะย้อนกลับค่าทุกอย่างที่ track ไว้จาก  BeginTransactionAsync
             var errors = new[] { ex.Message };
             return BadRequest(new { Errors = errors });
         }
