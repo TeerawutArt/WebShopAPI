@@ -9,9 +9,9 @@ public class PriceCalculateService
         double newPrice;
         if (isPercent)
         {
-            double discountPrice = price - (price * rate / 100);
+            double discountPrice =  (price * rate / 100);
             //maxDiscount จะเป็นกรณีที่มีการใช้คูปองส่วนลด 
-            newPrice = discountPrice > maxDiscount ? newPrice = maxDiscount : newPrice = discountPrice; //(ternary operator)
+            newPrice = discountPrice > maxDiscount ? newPrice = price - maxDiscount : newPrice = price - discountPrice; //(ternary operator)
         }
         else
         {
