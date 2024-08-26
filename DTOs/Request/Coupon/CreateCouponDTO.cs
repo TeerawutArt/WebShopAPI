@@ -1,22 +1,18 @@
 using System;
-using System.ComponentModel.DataAnnotations.Schema;
 
-namespace WebShoppingAPI.Models;
+namespace WebShoppingAPI.DTOs.Request.Coupon;
 
-public class CouponModel
+public class CreateCouponDTO
 {
-    public Guid Id { get; set; }
-    public string? Name { get; set; }
-    public string? Code { get; set; }
+    public string? CouponName { get; set; }
+    public string? CouponCode { get; set; }
     public string? Description { get; set; }
     public DateTime StartTime { get; set; }
     public DateTime EndTime { get; set; }
     public int Amount { get; set; }
-    public double Discount { get; set; }
+    public double DiscountRate { get; set; }
     public bool IsDiscountPercent { get; set; }
     public bool IsAvailable { get; set; }
     public double MaxDiscount { get; set; }
     public double MinimumPrice { get; set; } //ราคาขั้นต่ำที่ใช้คูปองได้
-
-    public ICollection<UsedCouponModel> UsedCoupons { get; set; } = new List<UsedCouponModel>(); //ไว้ track การใช้คูปอง
 }

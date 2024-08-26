@@ -139,7 +139,7 @@ public class DiscountsController(AppDbContext appDbContext, UserManager<UserMode
             curDiscount.EndTime = req.EndTime;
 
             if (req.ProductId.Any())
-            {//เงื่อนไขเดิม จะเพิ่มสินค้าได้ก็ต่อเมื่อมันยังไม่ลดราคา ถ้าลดต้องไปยกเลิกก่อน
+            {//เงื่อนไขเดิม จะเพิ่มสินค้าได้ก็ต่อเมื่อมันยังไม่ลดราคา ถ้าจะลดต้องไปยกเลิกก่อน
                 foreach (var productId in req.ProductId)
                 {
                     var products = await _appDbContext.Products.Where(p => p.Id == productId && p.DiscountId == null).ToListAsync();

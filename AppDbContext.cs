@@ -16,6 +16,7 @@ public class AppDbContext : IdentityDbContext<UserModel, RoleModel, Guid>
     public DbSet<CategoryModel> Categories { get; set; }
     public DbSet<DiscountModel> Discounts { get; set; }
     public DbSet<CouponModel> Coupons { get; set; }
+    public DbSet<UsedCouponModel> UsedCoupons { get; set; }
     public DbSet<ReviewCommentModel> ReviewComments { get; set; }
     public DbSet<ProductCategoryModel> ProductCategories { get; set; }
     public DbSet<AddressModel> Addresses { get; set; }

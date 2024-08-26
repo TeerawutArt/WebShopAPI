@@ -182,15 +182,6 @@ public class OrdersController(AppDbContext appDbContext, UserManager<UserModel> 
                 IsSuccess = order.IsPaid,
                 Status = order.Status,
                 TransportInfo = order.TransportInfo,
-                OrderProducts = _appDbContext.Orders.Where(o => o.UserId == user.Id).SelectMany(o => o.OrderProducts).Select(p => new OrderProductDTO
-                {
-                    ProductId = p.ProductId,
-                    ProductName = p.Product!.Name,
-                    UnitPrice = p.UnitPrice,
-                    ProductQuantity = p.Quantity,
-                    NetPrice = p.NetPrice,
-                }
-                 ).ToList(),
                 TotalPrice = order.TotalPrice,
             }).ToListAsync();
             return Ok(orders);
