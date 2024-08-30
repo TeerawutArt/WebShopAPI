@@ -44,7 +44,7 @@ msbuild.wrn
 Migrations
 todo.txt
 #Database 
-
+UploadImage/
 appAPI.Development.db
 appAPI.Development.db-shm
 appAPI.Development.db-wal

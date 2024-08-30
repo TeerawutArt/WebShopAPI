@@ -9,8 +9,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WebShoppingAPI.DTOs.Response.User;
-using WebShoppingAPI.DTOs.Request.User;
-using Microsoft.Extensions.Options;
 namespace WebShoppingAPI.Controllers;
 
 [ApiController]
@@ -23,12 +21,15 @@ public class AccountsController(UserManager<UserModel> userManager, TokenHelper 
     private readonly UserManager<UserModel> _userManager = userManager;
     private readonly TokenHelper _tokenHelper = tokenHelper;
 
-
+    private readonly TimeZoneInfo localeTimeZone = TimeZoneInfo.Local;
     private readonly string defaultImageURLForUser = "default-user-image.png";
 
     [HttpPost("Register")]
     public async Task<IActionResult> RegisterUser(RegisterUserDTO req)
     {
+        //แปลงเวลา locate เป็น UTC
+        /* DateTime utcBirthDate = TimeZoneInfo.ConvertTimeToUtc(DateTime.Parse(req.BirthDate!), localeTimeZone); */ //วันเกิดเก็บเวลา locale ก็ได้ (เวลาไม่มีผล)
+
         var newUser = new UserModel
         {
             FirstName = req.FirstName,
@@ -36,6 +37,8 @@ public class AccountsController(UserManager<UserModel> userManager, TokenHelper 
             Email = req.Email,
             UserName = req.UserName,
             PhoneNumber = req.PhoneNumber,
+            Gender = req.Gender,
+            BirthDate = DateTime.Parse(req.BirthDate!),
             Blocked = false,
             UserImageURL = defaultImageURLForUser,
 
@@ -173,6 +176,8 @@ public class AccountsController(UserManager<UserModel> userManager, TokenHelper 
                 LastName = user.LastName,
                 Email = user.Email,
                 PhoneNumber = user.PhoneNumber,
+                Gender = user.Gender,
+                BirthDate = user.BirthDate,
                 Addresses = user.Addresses.Select(a => new AddressDTO
                 {
                     AddressId = a.Id,

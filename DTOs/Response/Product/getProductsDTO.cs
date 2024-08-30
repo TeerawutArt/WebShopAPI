@@ -5,8 +5,8 @@ namespace WebShoppingAPI.DTOs.Response;
 
 public class GetProductsDTO
 {
-    public bool OnlyMyItem { get; set; }
-    public bool AvailableProduct { get; set; }
+    public bool ManageProductMode { get; set; }
+    public bool HideDisableProduct { get; set; }
     public string? Keyword { get; set; }
 
     [Range(1, 1000)] //กำหนดขอบเขต ของ PageIndex

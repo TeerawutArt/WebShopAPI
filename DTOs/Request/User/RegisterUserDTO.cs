@@ -23,6 +23,11 @@ public class RegisterUserDTO
     [Required(ErrorMessage = "กรุณาเบอร์โทรศัพท์")]
     [MaxLength(20, ErrorMessage = "ข้อความยาวเกินไป")]
     public required string PhoneNumber { get; set; }
+
+    [Required(ErrorMessage = "กรุณาระบุเพศ")]
+    public required string Gender { get; set; }
+    [Required(ErrorMessage = "กรุณาระบุวันเกิด")]
+    public string? BirthDate { get; set; }
     [Required(ErrorMessage = "กรุณากรอกรหัสผ่าน"),
     MinLength(5, ErrorMessage = "รหัสผ่านต้องมีความยาวมากกว่า 5 ตัวอักษร"),
     MaxLength(20, ErrorMessage = "รหัสผ่านต้องไม่เกิน 20 ตัวอักษร")]

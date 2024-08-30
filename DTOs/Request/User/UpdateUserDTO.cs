@@ -21,6 +21,7 @@ public class UpdateUserDTO
 
     [Required(ErrorMessage = "กรุณาเบอร์โทรศัพท์")]
     public required string PhoneNumber { get; set; }
-
+    [Required(ErrorMessage = "กรุณาระบุเพศ")]
+    public required string Gender { get; set; }
 
 }

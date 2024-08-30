@@ -25,11 +25,9 @@ public class CategoryController(AppDbContext appDbContext) : ControllerBase
         {
             var categories = await _appDbContext.Categories.Select(c => new CategoriesDTO
             {
-                Id = c.Id,
                 Name = c.Name,
-                NormalizedName = c.NormalizedName,
-                Description = c.Description
-
+                Code = c.NormalizedName,
+                Id = c.Id
             }).ToListAsync();
             return Ok(categories);
         }

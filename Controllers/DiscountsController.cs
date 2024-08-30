@@ -105,6 +105,7 @@ public class DiscountsController(AppDbContext appDbContext, UserManager<UserMode
                 StartTime = d.StartTime,
                 EndTime = d.EndTime,
                 IsDiscountPercent = d.IsDiscountPercent,
+                DiscountRate = d.DiscountRate,
                 IsDiscounted = d.IsDiscounted,
                 DiscountProductID = d.Products.Select(p => p.Id).ToList()
             }).ToListAsync();

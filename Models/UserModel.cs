@@ -10,6 +10,8 @@ public class UserModel : IdentityUser<Guid>
     public string? UserImageURL { get; set; }
     public required string FirstName { get; set; }
     public required string LastName { get; set; }
+    public required string Gender { get; set; }
+    public DateTime BirthDate { get; set; }
     public ICollection<AddressModel> Addresses { get; set; } = new List<AddressModel>();
     //จริงประสิทธิภาพของ empty list กับ Null มันน้อยมาก ถ้าไม่คิดมากก็เซ็ตเป็น empty list หมดเลยก็ได้
 

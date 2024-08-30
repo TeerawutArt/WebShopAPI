@@ -35,17 +35,22 @@ public class ProductsController(AppDbContext appDbContext, FileService fileServi
         {
             var query = _appDbContext.Products.AsQueryable();
             var curDate = DateTime.UtcNow;
-
-            var curUserId = User.FindFirstValue("uid");
-            if (curUserId is not null && req.OnlyMyItem)
+            UserModel? user = await userManager.FindByIdAsync(User.FindFirstValue("uid")!);
+            if (user == null)
             {
-                UserModel? user = await userManager.FindByIdAsync(curUserId!);
+                query = query.Where(e => e.IsAvailable == true);
+            }
+            if (user != null && req.ManageProductMode)
+            {
                 query = query.Where(e => e.UserId == user!.Id);
+            }
+            if (user != null)
+            {
                 var userRole = await userManager.GetRolesAsync(user!);
                 //ตรวจสอบ Product ว่ามีอยู่ไหม (role customer ไม่โชว์ หรือติ้กไม่โชว์)
-                if (userRole.Any(role => role == "Customer") || !req.AvailableProduct)
+                if (userRole.Any(role => role == "Customer") || req.HideDisableProduct)
                 {
-                    query = query.Where(e => e.IsAvailable == false);
+                    query = query.Where(e => e.IsAvailable == true);
                 }
             }
             if (!string.IsNullOrWhiteSpace(req.Keyword)) //IsNullOrWhiteSpace คือ ไม่เอา spacebar ด้วย
@@ -57,41 +62,36 @@ public class ProductsController(AppDbContext appDbContext, FileService fileServi
             var pageIndex = req.PageIndex;
             var pageSize = req.PageSize;
             var skipRecords = (pageIndex - 1) * pageSize; //ใน db ค่าเริ่มที่ 0 แต่ที่ส่งมาจาก fontEnd จะส่งมาเป็น 1 เลยต้อง -1
-            var products = await query.OrderBy(e => e.UpdatedTime).Skip(skipRecords).Take(pageSize).Select(row => new ProductDTO
+            var products = await query.OrderByDescending(e => e.CreatedTime).Skip(skipRecords).Take(pageSize).Select(row => new ProductListDTO
             {
                 ProductId = row.Id,
                 ProductImageURL = row.ProductImageURL,
                 ProductName = row.Name,
-                ProductDescription = row.Description,
+                Description = row.Description,
                 ProductTotalAmount = row.TotalAmount,
                 ProductSoldAmount = row.SoldAmount,
-                ProductCreatedBy = row.CreatedBy,
-                ProductUpdatedBy = row.UpdatedBy,
-                ProductCreatedTime = row.CreatedTime,
-                ProductUpdatedTime = row.UpdatedTime,
                 Price = row.Price,
                 DiscountPrice = row.DiscountPrice,
                 TotalScore = row.TotalScore,
                 IsAvailable = row.IsAvailable,
+                IsDiscounted = row.Discount != null ? row.Discount.IsDiscounted : false,
+                DiscountStartDate = row.Discount != null ? row.Discount.StartTime : new DateTime(),
+                DiscountEndDate = row.Discount != null ? row.Discount.EndTime : new DateTime(),
+                IsDiscountPercent = row.Discount != null ? row.Discount.IsDiscountPercent : false,
+                DiscountRate = row.Discount != null ? row.Discount.DiscountRate : 0,
                 Categories = row.ProductCategories.Select(pc => new CategoriesDTO
                 {
-                    Id = pc.CategoryId,
+                    Id = pc.Category!.Id,
                     Name = pc.Category!.Name,
-                    Description = pc.Category.Description,
-                    NormalizedName = pc.Category.NormalizedName,
+                    Code = pc.Category.NormalizedName,
                 }).ToList()
             }).ToListAsync();
-            var res = new PagingDTO<ProductDTO>
+            var res = new PagingDTO<ProductListDTO>
             {
                 TotalRecords = totalRecords,
                 Items = products
             };
-            //แปลงเวลากลับจาก UTC กลับเป็น locale
-            foreach (var item in res.Items)
-            {
-                item.ProductCreatedTime = TimeZoneInfo.ConvertTimeFromUtc(item.ProductCreatedTime, localeTimeZone);
-                item.ProductUpdatedTime = TimeZoneInfo.ConvertTimeFromUtc(item.ProductUpdatedTime, localeTimeZone);
-            }
+
 
             return Ok(res);
 
@@ -104,6 +104,97 @@ public class ProductsController(AppDbContext appDbContext, FileService fileServi
 
 
     }
+
+    [HttpPost("ProductDetail/Product{id}")]
+    public async Task<IActionResult> GetProductDetail(Guid id)
+    {
+        try
+        {
+
+            UserModel? user = await userManager.FindByIdAsync(User.FindFirstValue("uid")!);
+            if (user is null)
+            {
+                var errors = new[] { "Invalid request or no permission" };
+                return BadRequest(new { Errors = errors });
+            }
+            var userRole = await userManager.GetRolesAsync(user!);
+            //ตรวจสอบ Product ว่ามีอยู่ไหม (role customer ไม่โชว์ หรือติ้กไม่โชว์)
+            if (userRole.Any(role => role == "Customer"))
+            {
+                var products = await _appDbContext.Products.Where(p => p.Id == id).Select(row => new ProductDTO
+                {
+                    ProductImageURL = row.ProductImageURL,
+                    ProductName = row.Name,
+                    ProductDescription = row.Description,
+                    ProductTotalAmount = row.TotalAmount,
+                    ProductSoldAmount = row.SoldAmount,
+                    Price = row.Price,
+                    DiscountPrice = row.DiscountPrice,
+                    TotalScore = row.TotalScore,
+                    IsAvailable = row.IsAvailable,
+                    IsDiscounted = row.Discount != null ? row.Discount.IsDiscounted : false,
+                    DiscountStartDate = row.Discount != null ? row.Discount.StartTime : new DateTime(),
+                    DiscountEndDate = row.Discount != null ? row.Discount.EndTime : new DateTime(),
+                    IsDiscountPercent = row.Discount != null ? row.Discount.IsDiscountPercent : false,
+                    DiscountRate = row.Discount != null ? row.Discount.DiscountRate : 0,
+                    Categories = row.ProductCategories.Select(pc => new CategoriesDTO
+                    {
+                        Name = pc.Category!.Name,
+                        Code = pc.Category.NormalizedName,
+                    }).ToList()
+                }).ToListAsync();
+                foreach (var item in products)
+                {
+                    item.DiscountStartDate = TimeZoneInfo.ConvertTimeFromUtc(item.DiscountStartDate, localeTimeZone);
+                    item.DiscountEndDate = TimeZoneInfo.ConvertTimeFromUtc(item.DiscountEndDate, localeTimeZone);
+                }
+                return Ok(products);
+            }
+            else
+            {
+                var products = await _appDbContext.Products.Where(p => p.Id == id).Select(row => new ProductDTO
+                {
+                    ProductId = row.Id,
+                    ProductImageURL = row.ProductImageURL,
+                    ProductName = row.Name,
+                    ProductDescription = row.Description,
+                    ProductTotalAmount = row.TotalAmount,
+                    ProductSoldAmount = row.SoldAmount,
+                    ProductCreatedBy = row.CreatedBy,
+                    ProductCreatedTime = row.CreatedTime,
+                    Price = row.Price,
+                    DiscountPrice = row.DiscountPrice,
+                    TotalScore = row.TotalScore,
+                    IsAvailable = row.IsAvailable,
+                    IsDiscounted = row.Discount != null ? row.Discount.IsDiscounted : false,
+                    DiscountStartDate = row.Discount != null ? row.Discount.StartTime : new DateTime(),
+                    DiscountEndDate = row.Discount != null ? row.Discount.EndTime : new DateTime(),
+                    IsDiscountPercent = row.Discount != null ? row.Discount.IsDiscountPercent : false,
+                    DiscountRate = row.Discount != null ? row.Discount.DiscountRate : 0,
+                    Categories = row.ProductCategories.Select(pc => new CategoriesDTO
+                    {
+                        Name = pc.Category!.Name,
+                        Code = pc.Category.NormalizedName,
+                    }).ToList()
+                }).ToListAsync();
+                //แปลงเวลากลับจาก UTC กลับเป็น locale
+                foreach (var item in products)
+                {
+                    item.ProductCreatedTime = TimeZoneInfo.ConvertTimeFromUtc(item.ProductCreatedTime, localeTimeZone);
+                    item.DiscountStartDate = TimeZoneInfo.ConvertTimeFromUtc(item.DiscountStartDate, localeTimeZone);
+                    item.DiscountEndDate = TimeZoneInfo.ConvertTimeFromUtc(item.DiscountEndDate, localeTimeZone);
+                }
+                return Ok(products);
+            }
+        }
+        catch (Exception ex)
+        {
+            var errors = new[] { ex.Message };
+            return BadRequest(new { Errors = errors });
+        }
+    }
+
+
     [HttpPost]
     [Authorize(Roles = "Sale,Admin")]
     [Consumes("multipart/form-data")]
@@ -190,7 +281,7 @@ public class ProductsController(AppDbContext appDbContext, FileService fileServi
                 curProduct.ProductImageURL = createdImageName;
             }
             else { curProduct.ProductImageURL = curProduct.ProductImageURL; }
-            curProduct.Name = req.Name!;
+            curProduct.Name = req.Name == null ? curProduct.Name : req.Name;
             curProduct.Description = req.Description;
             curProduct.TotalAmount = Int32.Parse(req.TotalAmount!);
             curProduct.UpdatedBy = User.FindFirstValue("name");
@@ -199,7 +290,7 @@ public class ProductsController(AppDbContext appDbContext, FileService fileServi
             _appDbContext.Products.Update(curProduct);
             //update ความสัมพันธ์ (ลบเก่าสร้างใหม่)
             _appDbContext.ProductCategories.RemoveRange(curProduct.ProductCategories.ToList());
-            foreach (var categoryId in req.NewCategoryId)
+            foreach (var categoryId in req.CategoryId)
             {
                 var newProductCategory = new ProductCategoryModel
                 {

@@ -41,6 +41,8 @@ FileService fileService, IConfiguration iConfiguration) : ControllerBase
             LastName = user.LastName,
             Email = user.Email,
             PhoneNumber = user.PhoneNumber,
+            Gender = user.Gender,
+            BirthDate = user.BirthDate,
             Blocked = user.Blocked,
             //วิธี Projection ( SelectMany เอามาแค่ที่ต้องการ Include เอามาหมด ในแง่ของการดึงข้อมูลมาบางส่วน) 
             Addresses = _userManager.Users.Where(u => u.Id == user.Id).SelectMany(a => a.Addresses).Select(a => new AddressDTO
@@ -84,6 +86,7 @@ FileService fileService, IConfiguration iConfiguration) : ControllerBase
                 user.FirstName = req.FirstName;
                 user.LastName = req.LastName;
                 user.PhoneNumber = req.PhoneNumber;
+                user.Gender = req.Gender;
                 user.UserImageURL = createdImageName;
             }
             catch (Exception ex)
@@ -98,6 +101,7 @@ FileService fileService, IConfiguration iConfiguration) : ControllerBase
             user.FirstName = req.FirstName;
             user.LastName = req.LastName;
             user.PhoneNumber = req.PhoneNumber;
+            user.Gender = req.Gender;
         }
         await _userManager.UpdateAsync(user);
         return NoContent();
