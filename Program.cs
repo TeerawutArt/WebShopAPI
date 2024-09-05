@@ -20,6 +20,7 @@ var services = builder.Services;
 services.AddScoped<FileService>();
 services.AddScoped<TokenHelper>();
 services.AddScoped<PriceCalculateService>();
+services.AddHostedService<CheckTimeEventService>(); //AddHostedService ทำงานพื้นหลังตลอดเวลา (ไม่ต้องเรียกใช้งาน)
 //controller//
 services.AddControllers();
 

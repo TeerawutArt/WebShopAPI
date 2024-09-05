@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WebShoppingAPI.DTOs.Response.Category;
+using WebShoppingAPI.DTOs.Request.Product;
 
 namespace WebShoppingAPI.Controllers;
 
@@ -139,6 +140,7 @@ public class ProductsController(AppDbContext appDbContext, FileService fileServi
                     DiscountRate = row.Discount != null ? row.Discount.DiscountRate : 0,
                     Categories = row.ProductCategories.Select(pc => new CategoriesDTO
                     {
+                        Id = pc.Category!.Id,
                         Name = pc.Category!.Name,
                         Code = pc.Category.NormalizedName,
                     }).ToList()
@@ -370,4 +372,37 @@ public class ProductsController(AppDbContext appDbContext, FileService fileServi
 
     }
 
+    [HttpDelete("Delete/Selected")]
+    [Authorize(Roles = "Sale,Admin")]
+    [ProducesResponseType(statusCode: StatusCodes.Status204NoContent)]
+    [ProducesResponseType(statusCode: StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteSelectedProduct(DeleteSelectedProductDTO req)
+    {
+        try
+        {
+            if (req.SelectedProductId == null || !req.SelectedProductId.Any())
+            {
+                return NotFound();
+            }
+            // ดึงสินค้าที่ต้องการลบทั้งหมด
+            var selectedProducts = await _appDbContext.Products
+                .Where(p => req.SelectedProductId.Contains(p.Id))
+                .ToListAsync();
+
+            if (!selectedProducts.Any())
+            {
+                return NotFound();
+            }
+            // ลบสินค้าที่ดึงมา
+            _appDbContext.Products.RemoveRange(selectedProducts);
+            await _appDbContext.SaveChangesAsync();
+
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            var errors = new[] { ex.Message };
+            return BadRequest(new { Errors = errors });
+        }
+    }
 }

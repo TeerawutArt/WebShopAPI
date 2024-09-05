@@ -43,7 +43,8 @@ public class TokenHelper(IConfiguration config, UserManager<UserModel> _userMana
     public async Task<(string AccessToken, string RefreshToken)> CreateToken(UserModel user, bool populateExp = true)
     {
         var accessToken = await CreateJwtToken(user);
-        user.RefreshToken = CreateRefreshToken();
+        var refreshToken = CreateRefreshToken();
+        user.RefreshToken = refreshToken;
         if (populateExp)
         {
             user.RefreshTokenExpiryTime = DateTime.UtcNow.AddMinutes(Convert.ToDouble(refreshTokenSettings["ExpiryInMinutes"]));

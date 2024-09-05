@@ -13,7 +13,7 @@ public class GetDiscountDTO
     public double DiscountRate { get; set; }
     public bool IsDiscountPercent { get; set; }
     public bool IsDiscounted { get; set; }
-    public List<Guid> DiscountProductID { get; set; } = new List<Guid>();
+    public List<ProductDiscountListDTO> DiscountProduct { get; set; } = new List<ProductDiscountListDTO>();
 
 
 }

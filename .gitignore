@@ -48,3 +48,4 @@ UploadImage/
 appAPI.Development.db
 appAPI.Development.db-shm
 appAPI.Development.db-wal
+CheckTimeEventService เก่า.cs

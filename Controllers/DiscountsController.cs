@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using WebShoppingAPI.DTOs.Request.Discount;
+using WebShoppingAPI.DTOs.Response.Category;
 using WebShoppingAPI.DTOs.Response.Discount;
 using WebShoppingAPI.Helpers;
 using WebShoppingAPI.Models;
@@ -36,6 +37,8 @@ public class DiscountsController(AppDbContext appDbContext, UserManager<UserMode
                 var errors = new[] { "Invalid request or no permission" };
                 return BadRequest(new { Errors = errors });
             }
+
+
             var newDiscount = new DiscountModel
             {
                 Name = req.DiscountName,
@@ -43,7 +46,7 @@ public class DiscountsController(AppDbContext appDbContext, UserManager<UserMode
                 StartTime = req.StartTime,
                 EndTime = req.EndTime,
                 DiscountRate = req.DiscountRate,
-                IsDiscounted = true,
+                IsDiscounted = DateTime.UtcNow >= req.StartTime ? true : false,
                 IsDiscountPercent = req.IsDiscountPercent,
             };
             _appDbContext.Discounts.Add(newDiscount);
@@ -97,6 +100,7 @@ public class DiscountsController(AppDbContext appDbContext, UserManager<UserMode
                 var errors = new[] { "Invalid request or no permission" };
                 return BadRequest(new { Errors = errors });
             }
+
             var discounts = await _appDbContext.Discounts.Select(d => new GetDiscountDTO
             {
                 DiscountId = d.Id,
@@ -107,7 +111,20 @@ public class DiscountsController(AppDbContext appDbContext, UserManager<UserMode
                 IsDiscountPercent = d.IsDiscountPercent,
                 DiscountRate = d.DiscountRate,
                 IsDiscounted = d.IsDiscounted,
-                DiscountProductID = d.Products.Select(p => p.Id).ToList()
+                DiscountProduct = d.Products.Select(p => new ProductDiscountListDTO
+                {
+                    ProductId = p.Id,
+                    ProductImageURL = p.ProductImageURL,
+                    ProductName = p.Name,
+                    Price = p.Price,
+                    DiscountPrice = p.DiscountPrice,
+                    Categories = p.ProductCategories.Select(pc => new CategoriesDTO
+                    {
+                        Name = pc.Category!.Name,
+                        Code = pc.Category.NormalizedName,
+                    }).ToList()
+
+                }).ToList()
             }).ToListAsync();
             return Ok(discounts);
 
@@ -137,13 +154,18 @@ public class DiscountsController(AppDbContext appDbContext, UserManager<UserMode
             //อัปเดทข้อมูลทั่วไป
             curDiscount.Name = req.DiscountName.IsNullOrEmpty() ? curDiscount.Name : req.DiscountName;
             curDiscount.Description = req.DiscountDescription.IsNullOrEmpty() ? curDiscount.Description : req.DiscountDescription;
+            curDiscount.StartTime = req.StartTime;
+            curDiscount.IsDiscounted = DateTime.UtcNow >= req.StartTime ? true : false;
+            curDiscount.DiscountRate = req.DiscountRate;
+            curDiscount.IsDiscountPercent = req.IsDiscountPercent;
             curDiscount.EndTime = req.EndTime;
 
+
             if (req.ProductId.Any())
-            {//เงื่อนไขเดิม จะเพิ่มสินค้าได้ก็ต่อเมื่อมันยังไม่ลดราคา ถ้าจะลดต้องไปยกเลิกก่อน
+            {
                 foreach (var productId in req.ProductId)
                 {
-                    var products = await _appDbContext.Products.Where(p => p.Id == productId && p.DiscountId == null).ToListAsync();
+                    var products = await _appDbContext.Products.Where(p => p.Id == productId && p.DiscountId == id).ToListAsync();
                     foreach (var product in products)
                     {
                         product.DiscountId = curDiscount.Id;
@@ -156,7 +178,7 @@ public class DiscountsController(AppDbContext appDbContext, UserManager<UserMode
                 foreach (var categoryId in req.CategoriesId)
                 {
 
-                    var products = await _appDbContext.Products.Where(p => p.ProductCategories.Any(pc => pc.CategoryId == categoryId && p.DiscountId == null)).ToListAsync();
+                    var products = await _appDbContext.Products.Where(p => p.ProductCategories.Any(pc => pc.CategoryId == categoryId && p.DiscountId == id)).ToListAsync();
                     foreach (var product in products)
                     {
                         product.DiscountId = curDiscount.Id;
@@ -174,9 +196,9 @@ public class DiscountsController(AppDbContext appDbContext, UserManager<UserMode
             return BadRequest(new { Errors = errors });
         }
     }
-    [HttpPut("CancelDiscount/{id}")]
+    [HttpPut("Cancel")]
     [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> CancelDiscountProduct(Guid id, CancelDiscountDTO req)
+    public async Task<IActionResult> CancelDiscountProduct(CancelDiscountDTO req)
     {
         try
         {
@@ -190,7 +212,7 @@ public class DiscountsController(AppDbContext appDbContext, UserManager<UserMode
             {
                 foreach (var productId in req.ProductId)
                 {
-                    var products = await _appDbContext.Products.Where(p => p.Id == productId && p.DiscountId == id).ToListAsync();
+                    var products = await _appDbContext.Products.Where(p => p.Id == productId).ToListAsync();
                     foreach (var product in products)
                     {
                         product.DiscountId = null;
@@ -203,7 +225,7 @@ public class DiscountsController(AppDbContext appDbContext, UserManager<UserMode
                 foreach (var categoryId in req.CategoriesId)
                 {
 
-                    var products = await _appDbContext.Products.Where(p => p.ProductCategories.Any(pc => pc.CategoryId == categoryId && p.DiscountId == id)).ToListAsync();
+                    var products = await _appDbContext.Products.Where(p => p.ProductCategories.Any(pc => pc.CategoryId == categoryId)).ToListAsync();
                     foreach (var product in products)
                     {
                         product.DiscountId = null;
@@ -240,7 +262,7 @@ public class DiscountsController(AppDbContext appDbContext, UserManager<UserMode
             // ลบความสัมพันธ์ระหว่าง Discount กับ Products
             foreach (var product in targetDiscount.Products)
             {
-                product.DiscountId = null;  // ตั้ง DiscountId กลับไปเป็น null
+                product.DiscountId = null;  // ตั้ง DiscountId ของ prod กลับไปเป็น null
                 product.DiscountPrice = product.Price; //ตั้งลดราคากลับไปเป็นราคาเต็ม
             }
             await _appDbContext.SaveChangesAsync();
