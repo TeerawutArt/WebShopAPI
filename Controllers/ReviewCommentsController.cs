@@ -24,7 +24,7 @@ public class ReviewCommentsController(AppDbContext appDbContext, UserManager<Use
     {
         try
         {
-            var reviewComments = await _appDbContext.ReviewComments.OrderByDescending(c => c.CreatedTime).Select(c => new ReviewCommentDTO
+            var reviewComments = await _appDbContext.ReviewComments.OrderByDescending(c => c.CreatedTimeUTC).Select(c => new ReviewCommentDTO
             {
                 ReviewCommentId = c.Id,
                 ProductId = c.ProductId,
@@ -32,8 +32,8 @@ public class ReviewCommentsController(AppDbContext appDbContext, UserManager<Use
                 Title = c.Title,
                 Content = c.Content,
                 Score = c.Score,
-                CreatedTime = c.CreatedTime,
-                UpdateTime = c.UpdateTime,
+                CreatedTime = c.CreatedTimeUTC,
+                UpdateTime = c.UpdateTimeUTC,
             }).ToListAsync();
 
             return Ok(reviewComments);
@@ -56,15 +56,15 @@ public class ReviewCommentsController(AppDbContext appDbContext, UserManager<Use
             if (curProduct == null) return NotFound();
             var query = _appDbContext.ReviewComments.AsQueryable();
             query = query.Where(c => c.ProductId == curProduct.Id);
-            var filterReviewComment = await query.OrderByDescending(q => q.CreatedTime).Select(x => new ReviewCommentDTO
+            var filterReviewComment = await query.OrderByDescending(q => q.CreatedTimeUTC).Select(x => new ReviewCommentDTO
             {
                 ReviewCommentId = x.Id,
                 CreatedBy = x.CreatedBy,
                 Title = x.Title,
                 Score = x.Score,
                 Content = x.Content,
-                CreatedTime = x.CreatedTime,
-                UpdateTime = x.UpdateTime,
+                CreatedTime = x.CreatedTimeUTC,
+                UpdateTime = x.UpdateTimeUTC,
             }).ToListAsync();
 
             return Ok(filterReviewComment);
@@ -95,7 +95,7 @@ public class ReviewCommentsController(AppDbContext appDbContext, UserManager<Use
                 Score = req.Score,
                 Content = req.Content,
                 ProductId = req.ProductId,
-                CreatedTime = DateTime.UtcNow
+                CreatedTimeUTC = DateTime.UtcNow
             };
             _appDbContext.Add(newReviewComment);
             await _appDbContext.SaveChangesAsync();
@@ -127,7 +127,7 @@ public class ReviewCommentsController(AppDbContext appDbContext, UserManager<Use
                 Content = req.Content,
                 ProductId = req.ProductId,
                 UserId = user!.Id,
-                CreatedTime = DateTime.UtcNow
+                CreatedTimeUTC = DateTime.UtcNow
 
             };
             _appDbContext.Add(replyReviewComment);
@@ -157,7 +157,7 @@ public class ReviewCommentsController(AppDbContext appDbContext, UserManager<Use
             curReviewComment.Title = req.Title;
             curReviewComment.Content = req.Content;
             curReviewComment.Score = req.Score;
-            curReviewComment.UpdateTime = DateTime.UtcNow;
+            curReviewComment.UpdateTimeUTC = DateTime.UtcNow;
             await _appDbContext.SaveChangesAsync();
             return NoContent();
         }

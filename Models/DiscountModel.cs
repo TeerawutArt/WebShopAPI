@@ -8,8 +8,8 @@ public class DiscountModel
     public Guid Id { get; set; }
     public string? Name { get; set; }
     public string? Description { get; set; }
-    public DateTime StartTime { get; set; }
-    public DateTime EndTime { get; set; }
+    public DateTime StartTimeUTC { get; set; }
+    public DateTime EndTimeUTC { get; set; }
     public double DiscountRate { get; set; }
     public bool IsDiscountPercent { get; set; }
     public bool IsDiscounted { get; set; }

@@ -36,8 +36,8 @@ public class OrdersController(AppDbContext appDbContext, UserManager<UserModel> 
             }
             var newOrder = new OrderModel
             {
-                OrderTime = DateTime.UtcNow,
-                ExpiryTime = DateTime.UtcNow.AddDays(ExpiryInDay),
+                OrderTimeUTC = DateTime.UtcNow,
+                ExpiryTimeUTC = DateTime.UtcNow.AddDays(ExpiryInDay),
                 Status = "รอชำระเงิน",
                 UserId = user.Id,
                 TransportInfo = "",
@@ -71,7 +71,7 @@ public class OrdersController(AppDbContext appDbContext, UserManager<UserModel> 
                 {
                     DateTime curDate = DateTime.UtcNow;
                     var discount = product.Discount;
-                    if (curDate >= discount.StartTime && curDate < discount.EndTime && discount.IsDiscounted)
+                    if (curDate >= discount.StartTimeUTC && curDate < discount.EndTimeUTC && discount.IsDiscounted)
                     {
                         var newOrderProduct = new OrderProductModel
                         {
@@ -151,9 +151,9 @@ public class OrdersController(AppDbContext appDbContext, UserManager<UserModel> 
             if (order is null) return NotFound();
             var curOrder = new OrderDTO
             {
-                OrderTime = order.OrderTime,
-                ExpiryTime = order.ExpiryTime,
-                TransactionTime = order.TransactionTime,
+                OrderTime = order.OrderTimeUTC,
+                ExpiryTime = order.ExpiryTimeUTC,
+                TransactionTime = order.TransactionTimeUTC,
                 IsSuccess = order.IsPaid,
                 Status = order.Status,
                 TransportInfo = order.TransportInfo,
@@ -176,9 +176,9 @@ public class OrdersController(AppDbContext appDbContext, UserManager<UserModel> 
             {
                 OrderId = order.Id,
                 UserId = order.UserId,
-                OrderTime = order.OrderTime,
-                ExpiryTime = order.ExpiryTime,
-                TransactionTime = order.TransactionTime,
+                OrderTime = order.OrderTimeUTC,
+                ExpiryTime = order.ExpiryTimeUTC,
+                TransactionTime = order.TransactionTimeUTC,
                 IsSuccess = order.IsPaid,
                 Status = order.Status,
                 TransportInfo = order.TransportInfo,
@@ -205,7 +205,7 @@ public class OrdersController(AppDbContext appDbContext, UserManager<UserModel> 
                 var errors = new[] { "ไม่พบ Order ที่ชำระเงินกรุณาติดต่อผู้ดูแลระบบ" };
                 return BadRequest(new { Errors = errors });
             }
-            if (curOrder.ExpiryTime > DateTime.UtcNow)
+            if (curOrder.ExpiryTimeUTC > DateTime.UtcNow)
             {
                 curOrder.Status = "เลยกำหนดชำระเงิน";
                 var errors = new[] { "คำสั่งซื้อถูกยกเลิกเนื่องจากเลยเวลาชำระเงิน" }; //ตรงนี้ให้หน้าบ้านฟ้องสาเหตุ :คำสั่งซื้อถูกยกเลิกเนื่องจากเลยเวลาชำระเงิน
@@ -235,7 +235,7 @@ public class OrdersController(AppDbContext appDbContext, UserManager<UserModel> 
             {
                 curOrder!.IsPaid = true;
                 curOrder!.Status = "อยู่ระหว่างจัดส่ง";
-                curOrder!.TransactionTime = DateTime.UtcNow;
+                curOrder!.TransactionTimeUTC = DateTime.UtcNow;
 
                 foreach (var orderProduct in curOrder.OrderProducts)
                 {

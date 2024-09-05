@@ -20,9 +20,9 @@ public class ReviewCommentModel
 
     public string? CreatedBy { get; set; }
 
-    public DateTime CreatedTime { get; set; }
+    public DateTime CreatedTimeUTC { get; set; }
 
-    public DateTime UpdateTime { get; set; }
+    public DateTime UpdateTimeUTC { get; set; }
 
 
     //many-to-one

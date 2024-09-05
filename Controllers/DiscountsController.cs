@@ -20,7 +20,7 @@ public class DiscountsController(AppDbContext appDbContext, UserManager<UserMode
 {
     private readonly AppDbContext _appDbContext = appDbContext;
     private readonly UserManager<UserModel> _userManager = userManager;
-
+    private readonly TimeZoneInfo localeTimeZone = TimeZoneInfo.Local;
     private readonly PriceCalculateService _priceCalculate = priceCalculate;
 
 
@@ -43,8 +43,8 @@ public class DiscountsController(AppDbContext appDbContext, UserManager<UserMode
             {
                 Name = req.DiscountName,
                 Description = req.DiscountDescription,
-                StartTime = req.StartTime,
-                EndTime = req.EndTime,
+                StartTimeUTC = req.StartTime,
+                EndTimeUTC = req.EndTime,
                 DiscountRate = req.DiscountRate,
                 IsDiscounted = DateTime.UtcNow >= req.StartTime ? true : false,
                 IsDiscountPercent = req.IsDiscountPercent,
@@ -106,8 +106,8 @@ public class DiscountsController(AppDbContext appDbContext, UserManager<UserMode
                 DiscountId = d.Id,
                 DiscountName = d.Name,
                 Description = d.Description,
-                StartTime = d.StartTime,
-                EndTime = d.EndTime,
+                StartTime = TimeZoneInfo.ConvertTimeFromUtc(d.StartTimeUTC, localeTimeZone),
+                EndTime = TimeZoneInfo.ConvertTimeFromUtc(d.EndTimeUTC, localeTimeZone),
                 IsDiscountPercent = d.IsDiscountPercent,
                 DiscountRate = d.DiscountRate,
                 IsDiscounted = d.IsDiscounted,
@@ -154,11 +154,11 @@ public class DiscountsController(AppDbContext appDbContext, UserManager<UserMode
             //อัปเดทข้อมูลทั่วไป
             curDiscount.Name = req.DiscountName.IsNullOrEmpty() ? curDiscount.Name : req.DiscountName;
             curDiscount.Description = req.DiscountDescription.IsNullOrEmpty() ? curDiscount.Description : req.DiscountDescription;
-            curDiscount.StartTime = req.StartTime;
+            curDiscount.StartTimeUTC = req.StartTime;
             curDiscount.IsDiscounted = DateTime.UtcNow >= req.StartTime ? true : false;
             curDiscount.DiscountRate = req.DiscountRate;
             curDiscount.IsDiscountPercent = req.IsDiscountPercent;
-            curDiscount.EndTime = req.EndTime;
+            curDiscount.EndTimeUTC = req.EndTime;
 
 
             if (req.ProductId.Any())

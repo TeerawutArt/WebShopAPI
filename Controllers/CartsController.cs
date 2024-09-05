@@ -38,7 +38,8 @@ public class CartsController(AppDbContext appDbContext, UserManager<UserModel> u
                 };
                 _appDbContext.Carts.Add(newCart);
                 await _appDbContext.SaveChangesAsync();
-                //save ก่อนจะได้มี cart id
+                //ดึงข้อมูล cart ที่เพิ่งสร้างใหม่ออกมาใหม่
+                cart = newCart;
             }
             //เช็ค logic ว่ามี product นั้นอยู่ในตระกร้าหรือยัง 
             var cartItem = await _appDbContext.CartItems.FirstOrDefaultAsync(c => c.CartId == cart!.Id && c.ProductId == req.ProductId);
@@ -88,6 +89,7 @@ public class CartsController(AppDbContext appDbContext, UserManager<UserModel> u
                 ProductId = p.ProductId,
                 ProductImageURL = p.Product!.ProductImageURL,
                 ProductName = p.Product!.Name,
+                Description = p.Product.Description, //ดูก่อน
                 ProductPrice = p.Product!.Price,
                 Quantity = p.Quantity
             }).ToList();
@@ -99,7 +101,7 @@ public class CartsController(AppDbContext appDbContext, UserManager<UserModel> u
             return BadRequest(new { Errors = errors });
         }
     }
-    [HttpPut("CartItem/product{id}")]
+    [HttpPut("CartItem/product/{id}")]
     [Authorize]
     public async Task<IActionResult> UpdateQuantityCartItem(Guid id, UpdateQuantityItemDTO req)
     {
@@ -121,7 +123,7 @@ public class CartsController(AppDbContext appDbContext, UserManager<UserModel> u
             return BadRequest(new { Errors = errors });
         }
     }
-    [HttpDelete("CartItem/product{id}")]
+    [HttpDelete("CartItem/product/{id}")]
     [Authorize]
     public async Task<IActionResult> DeleteCartItem(Guid id)
     {

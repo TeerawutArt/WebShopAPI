@@ -63,7 +63,7 @@ public class ProductsController(AppDbContext appDbContext, FileService fileServi
             var pageIndex = req.PageIndex;
             var pageSize = req.PageSize;
             var skipRecords = (pageIndex - 1) * pageSize; //ใน db ค่าเริ่มที่ 0 แต่ที่ส่งมาจาก fontEnd จะส่งมาเป็น 1 เลยต้อง -1
-            var products = await query.OrderByDescending(e => e.CreatedTime).Skip(skipRecords).Take(pageSize).Select(row => new ProductListDTO
+            var products = await query.OrderByDescending(e => e.CreatedTimeUTC).Skip(skipRecords).Take(pageSize).Select(row => new ProductListDTO
             {
                 ProductId = row.Id,
                 ProductImageURL = row.ProductImageURL,
@@ -76,8 +76,12 @@ public class ProductsController(AppDbContext appDbContext, FileService fileServi
                 TotalScore = row.TotalScore,
                 IsAvailable = row.IsAvailable,
                 IsDiscounted = row.Discount != null ? row.Discount.IsDiscounted : false,
-                DiscountStartDate = row.Discount != null ? row.Discount.StartTime : new DateTime(),
-                DiscountEndDate = row.Discount != null ? row.Discount.EndTime : new DateTime(),
+                DiscountStartDate = row.Discount != null
+                ? TimeZoneInfo.ConvertTimeFromUtc(row.Discount.StartTimeUTC, localeTimeZone)
+                : new DateTime(),
+                DiscountEndDate = row.Discount != null
+                ? TimeZoneInfo.ConvertTimeFromUtc(row.Discount.EndTimeUTC, localeTimeZone)
+                : new DateTime(),
                 IsDiscountPercent = row.Discount != null ? row.Discount.IsDiscountPercent : false,
                 DiscountRate = row.Discount != null ? row.Discount.DiscountRate : 0,
                 Categories = row.ProductCategories.Select(pc => new CategoriesDTO
@@ -106,7 +110,7 @@ public class ProductsController(AppDbContext appDbContext, FileService fileServi
 
     }
 
-    [HttpPost("ProductDetail/Product{id}")]
+    [HttpGet("ProductDetail/Product{id}")]
     public async Task<IActionResult> GetProductDetail(Guid id)
     {
         try
@@ -134,8 +138,8 @@ public class ProductsController(AppDbContext appDbContext, FileService fileServi
                     TotalScore = row.TotalScore,
                     IsAvailable = row.IsAvailable,
                     IsDiscounted = row.Discount != null ? row.Discount.IsDiscounted : false,
-                    DiscountStartDate = row.Discount != null ? row.Discount.StartTime : new DateTime(),
-                    DiscountEndDate = row.Discount != null ? row.Discount.EndTime : new DateTime(),
+                    DiscountStartDate = row.Discount != null ? row.Discount.StartTimeUTC : new DateTime(),
+                    DiscountEndDate = row.Discount != null ? row.Discount.EndTimeUTC : new DateTime(),
                     IsDiscountPercent = row.Discount != null ? row.Discount.IsDiscountPercent : false,
                     DiscountRate = row.Discount != null ? row.Discount.DiscountRate : 0,
                     Categories = row.ProductCategories.Select(pc => new CategoriesDTO
@@ -163,14 +167,14 @@ public class ProductsController(AppDbContext appDbContext, FileService fileServi
                     ProductTotalAmount = row.TotalAmount,
                     ProductSoldAmount = row.SoldAmount,
                     ProductCreatedBy = row.CreatedBy,
-                    ProductCreatedTime = row.CreatedTime,
+                    ProductCreatedTime = row.CreatedTimeUTC,
                     Price = row.Price,
                     DiscountPrice = row.DiscountPrice,
                     TotalScore = row.TotalScore,
                     IsAvailable = row.IsAvailable,
                     IsDiscounted = row.Discount != null ? row.Discount.IsDiscounted : false,
-                    DiscountStartDate = row.Discount != null ? row.Discount.StartTime : new DateTime(),
-                    DiscountEndDate = row.Discount != null ? row.Discount.EndTime : new DateTime(),
+                    DiscountStartDate = row.Discount != null ? row.Discount.StartTimeUTC : new DateTime(),
+                    DiscountEndDate = row.Discount != null ? row.Discount.EndTimeUTC : new DateTime(),
                     IsDiscountPercent = row.Discount != null ? row.Discount.IsDiscountPercent : false,
                     DiscountRate = row.Discount != null ? row.Discount.DiscountRate : 0,
                     Categories = row.ProductCategories.Select(pc => new CategoriesDTO
@@ -225,7 +229,7 @@ public class ProductsController(AppDbContext appDbContext, FileService fileServi
                 Description = req.Description,
                 TotalAmount = Int32.Parse(req.TotalAmount!),
                 CreatedBy = User.FindFirstValue("name"),
-                CreatedTime = DateTime.UtcNow,
+                CreatedTimeUTC = DateTime.UtcNow,
                 Price = double.Parse(req.Price!),
                 DiscountPrice = double.Parse(req.Price!),
                 UserId = user!.Id,
@@ -288,7 +292,7 @@ public class ProductsController(AppDbContext appDbContext, FileService fileServi
             curProduct.TotalAmount = Int32.Parse(req.TotalAmount!);
             curProduct.UpdatedBy = User.FindFirstValue("name");
             curProduct.Price = double.Parse(req.Price!);
-            curProduct.UpdatedTime = DateTime.UtcNow;
+            curProduct.UpdatedTimeUTC = DateTime.UtcNow;
             _appDbContext.Products.Update(curProduct);
             //update ความสัมพันธ์ (ลบเก่าสร้างใหม่)
             _appDbContext.ProductCategories.RemoveRange(curProduct.ProductCategories.ToList());

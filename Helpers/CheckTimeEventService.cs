@@ -45,8 +45,8 @@ namespace WebShoppingAPI.Helpers
 
         private void SetupTimer(DiscountModel discount)
         {
-            var timeUntilStart = discount.StartTime - DateTime.UtcNow;
-            var timeUntilEnd = discount.EndTime - DateTime.UtcNow;
+            var timeUntilStart = discount.StartTimeUTC - DateTime.UtcNow;
+            var timeUntilEnd = discount.EndTimeUTC - DateTime.UtcNow;
 
             if (timeUntilStart < TimeSpan.Zero) timeUntilStart = TimeSpan.Zero;
             if (timeUntilEnd < TimeSpan.Zero) timeUntilEnd = TimeSpan.Zero;

@@ -215,7 +215,7 @@ FileService fileService, IConfiguration iConfiguration) : ControllerBase
         }
     }
 
-    [HttpDelete("Address{id}")]
+    [HttpDelete("Address/{id}")]
     [Authorize]
 
     public async Task<IActionResult> RemoveUserAddress(Guid id)

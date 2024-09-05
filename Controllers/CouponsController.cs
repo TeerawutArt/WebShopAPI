@@ -38,8 +38,8 @@ public class CouponsController(AppDbContext appDbContext, UserManager<UserModel>
                 Description = req.Description,
                 Amount = req.Amount,
                 Code = req.CouponCode,
-                StartTime = req.StartTime,
-                EndTime = req.EndTime,
+                StartTimeUTC = req.StartTime,
+                EndTimeUTC = req.EndTime,
                 Discount = req.DiscountRate,
                 IsDiscountPercent = req.IsDiscountPercent,
                 IsAvailable = req.IsAvailable,
@@ -78,8 +78,8 @@ public class CouponsController(AppDbContext appDbContext, UserManager<UserModel>
                 CouponCode = d.Code,
                 Amount = d.Amount,
                 UsedAmount = d.UsedCoupons.Count,
-                StartTime = d.StartTime,
-                EndTime = d.EndTime,
+                StartTime = d.StartTimeUTC,
+                EndTime = d.EndTimeUTC,
                 DiscountRate = d.Discount,
                 MaxDiscount = d.MaxDiscount,
                 MinimumPrice = d.MinimumPrice,
@@ -138,13 +138,13 @@ public class CouponsController(AppDbContext appDbContext, UserManager<UserModel>
                 return BadRequest(new { Errors = errors });
             }
 
-            if (curCoupon.StartTime > DateTime.UtcNow)
+            if (curCoupon.StartTimeUTC > DateTime.UtcNow)
             {
                 var errors = new[] { "คูปองยังไม่ถึงเวลาใช้งาน" };
                 return BadRequest(new { Errors = errors });
             }
 
-            if (curCoupon.EndTime < DateTime.UtcNow)
+            if (curCoupon.EndTimeUTC < DateTime.UtcNow)
             {
                 var errors = new[] { "คูปองหมดอายุแล้ว" };
                 return BadRequest(new { Errors = errors });
@@ -221,7 +221,7 @@ public class CouponsController(AppDbContext appDbContext, UserManager<UserModel>
             var targetCoupon = await _appDbContext.Coupons.FirstOrDefaultAsync(c => c.Id == id);
             if (targetCoupon == null) return NotFound();
             targetCoupon.Description = req.Description;
-            targetCoupon.EndTime = req.EndTime;
+            targetCoupon.EndTimeUTC = req.EndTime;
             targetCoupon.Amount = req.Amount;
             targetCoupon.IsAvailable = req.IsAvailable;
             targetCoupon.MaxDiscount = req.MaxDiscount;
