@@ -10,7 +10,9 @@ public class CartItemDTO
     public string? ProductImageURL { get; set; }
     public required string ProductName { get; set; }
     public string? Description { get; set; }
+    public Guid? DiscountId { get; set; }
     public double ProductPrice { get; set; }
+    public double ProductDiscountPrice { get; set; }
     public int Quantity { get; set; }
 
 }

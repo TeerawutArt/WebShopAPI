@@ -89,8 +89,10 @@ public class CartsController(AppDbContext appDbContext, UserManager<UserModel> u
                 ProductId = p.ProductId,
                 ProductImageURL = p.Product!.ProductImageURL,
                 ProductName = p.Product!.Name,
-                Description = p.Product.Description, //ดูก่อน
+                Description = p.Product.Description,
                 ProductPrice = p.Product!.Price,
+                DiscountId = p.Product.DiscountId, //ใช้แทน IsDiscount ได้อยู่ (ไว้เป็นเงื่อนไขแสดงผลลัพธ์หน้าบ้าน)
+                ProductDiscountPrice = p.Product!.DiscountPrice,
                 Quantity = p.Quantity
             }).ToList();
             return Ok(cartItem);
