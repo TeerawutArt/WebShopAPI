@@ -18,6 +18,7 @@ public class ProductModel
     public DateTime CreatedTimeUTC { get; set; }
     public DateTime UpdatedTimeUTC { get; set; }
     public double Price { get; set; }
+
     public double DiscountPrice { get; set; }
     public double TotalScore { get; set; }
     public bool IsAvailable { get; set; }

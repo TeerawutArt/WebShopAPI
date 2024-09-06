@@ -137,7 +137,8 @@ FileService fileService, IConfiguration iConfiguration) : ControllerBase
                 Receiver = req.ReceiverName,
                 PhoneNumber = req.ReceiverPhoneNumber,
                 AddressInfo = req.AddressInfo,
-                UserId = user.Id
+                UserId = user.Id,
+                IsDefault = false,
             };
             _appDbContext.Addresses.Add(newAddress);
             await _appDbContext.SaveChangesAsync();
@@ -170,7 +171,9 @@ FileService fileService, IConfiguration iConfiguration) : ControllerBase
                 AddressName = a.Name,
                 ReceiverName = a.Receiver,
                 ReceiverPhoneNumber = a.PhoneNumber,
-                AddressInfo = a.AddressInfo
+                AddressInfo = a.AddressInfo,
+                IsDefault = a.IsDefault
+
             }).ToList();
             return Ok(address);
         }
@@ -203,8 +206,26 @@ FileService fileService, IConfiguration iConfiguration) : ControllerBase
             curAddress.Receiver = req.ReceiverName;
             curAddress.PhoneNumber = req.ReceiverPhoneNumber;
             curAddress.AddressInfo = req.AddressInfo;
+            curAddress.IsDefault = req.IsDefault;
             _appDbContext.Addresses.Update(curAddress);
             await _appDbContext.SaveChangesAsync();
+            if (req.IsDefault == true)
+            {
+                var otherAddress = await _appDbContext.Addresses.Where(a => a.UserId == user.Id && a.Id != id).ToListAsync();
+                if (otherAddress.Count != 0)
+                {
+                    foreach (var address in otherAddress)
+                    {
+                        address.IsDefault = false;
+
+                    }
+                    _appDbContext.Addresses.UpdateRange(otherAddress);
+                    await _appDbContext.SaveChangesAsync();
+                }
+            }
+            //เปลี่ยน IsDefault ที่อยู่อื่นเป็น false
+
+
             return NoContent();
 
         }

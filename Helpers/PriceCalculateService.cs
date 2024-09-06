@@ -19,7 +19,7 @@ public class PriceCalculateService
             double discountPrice = rate;
             newPrice = price - discountPrice;
         }
-        return newPrice;
+        return Math.Round(newPrice, 2); //เอาทศนิยม 2 ตำแหน่งพอ
     }
 
 }

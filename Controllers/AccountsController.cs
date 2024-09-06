@@ -185,6 +185,7 @@ public class AccountsController(UserManager<UserModel> userManager, TokenHelper 
                     ReceiverName = a.Receiver,
                     ReceiverPhoneNumber = a.PhoneNumber,
                     AddressInfo = a.AddressInfo,
+                    IsDefault = a.IsDefault,
                 }).ToList(),
                 Blocked = user.Blocked,
             }).ToListAsync();
