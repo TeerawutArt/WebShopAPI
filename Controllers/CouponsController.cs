@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using WebShoppingAPI.DTOs.Request;
 using WebShoppingAPI.DTOs.Request.Coupon;
 using WebShoppingAPI.DTOs.Response.Coupon;
 using WebShoppingAPI.Helpers;
@@ -32,6 +33,12 @@ public class CouponsController(AppDbContext appDbContext, UserManager<UserModel>
                 var errors = new[] { "Invalid request or no permission" };
                 return BadRequest(new { Errors = errors });
             }
+            var checkCouponCode = await _appDbContext.Coupons.Where(c => c.Code!.ToLower() == req.CouponCode!.ToLower()).AnyAsync();
+            if (checkCouponCode)
+            {
+                var errors = new[] { "โค้ดคูปองนี้ถูกสร้างไปแล้ว" };
+                return BadRequest(new { Errors = errors });
+            }
             var newCoupon = new CouponModel
             {
                 Name = req.CouponName,
@@ -42,7 +49,7 @@ public class CouponsController(AppDbContext appDbContext, UserManager<UserModel>
                 EndTimeUTC = req.EndTime,
                 Discount = req.DiscountRate,
                 IsDiscountPercent = req.IsDiscountPercent,
-                IsAvailable = req.IsAvailable,
+                IsAvailable = true,
                 MaxDiscount = req.MaxDiscount,
                 MinimumPrice = req.MinimumPrice,
             };
@@ -60,7 +67,7 @@ public class CouponsController(AppDbContext appDbContext, UserManager<UserModel>
 
     [HttpGet]
     [Authorize]
-    public async Task<IActionResult> GetCoupons()
+    public async Task<IActionResult> GetCoupons([FromQuery] KeyWordsDTO req)
     {
         try
         {
@@ -70,7 +77,13 @@ public class CouponsController(AppDbContext appDbContext, UserManager<UserModel>
                 var errors = new[] { "Invalid request or no permission" };
                 return BadRequest(new { Errors = errors });
             }
-            var coupon = await _appDbContext.Coupons.Select(d => new GetCouponsDTO
+            var query = _appDbContext.Coupons.AsQueryable();
+            if (!string.IsNullOrWhiteSpace(req.Keyword)) //IsNullOrWhiteSpace คือ ไม่เอา spacebar ด้วย
+            {
+                query = query.Where(e => e.Name!.ToLower().Contains(req.Keyword.ToLower())  //Contains มีอักษรบางส่วน
+                || e.Code!.ToLower().Contains(req.Keyword.ToLower()));
+            }
+            var coupon = await query.Select(d => new GetCouponsDTO
             {
                 CouponId = d.Id,
                 CouponName = d.Name,
@@ -153,7 +166,7 @@ public class CouponsController(AppDbContext appDbContext, UserManager<UserModel>
             var targetOrder = await _appDbContext.Orders.FirstOrDefaultAsync(o => o.Id == id);
             if (targetOrder == null) return NotFound();
 
-            if (targetOrder.TotalPrice < curCoupon.MinimumPrice)
+            if (targetOrder.TotalPrice < curCoupon.MinimumPrice && curCoupon.MinimumPrice != 0)
             {
                 var errors = new[] { $"ราคาขั้นต่ำที่สามารถใช้คูปองได้: {curCoupon.MinimumPrice} บาท" };
                 return BadRequest(new { Errors = errors });
@@ -220,10 +233,14 @@ public class CouponsController(AppDbContext appDbContext, UserManager<UserModel>
             }
             var targetCoupon = await _appDbContext.Coupons.FirstOrDefaultAsync(c => c.Id == id);
             if (targetCoupon == null) return NotFound();
+            targetCoupon.Name = req.CouponName;
+            targetCoupon.Code = req.CouponCode;
             targetCoupon.Description = req.Description;
+            targetCoupon.StartTimeUTC = req.StartTime;
             targetCoupon.EndTimeUTC = req.EndTime;
             targetCoupon.Amount = req.Amount;
-            targetCoupon.IsAvailable = req.IsAvailable;
+            targetCoupon.Discount = req.DiscountRate;
+            targetCoupon.IsDiscountPercent = req.IsDiscountPercent;
             targetCoupon.MaxDiscount = req.MaxDiscount;
             targetCoupon.MinimumPrice = req.MinimumPrice;
 
@@ -234,6 +251,60 @@ public class CouponsController(AppDbContext appDbContext, UserManager<UserModel>
         catch (Exception ex)
         {
 
+            var errors = new[] { ex.Message };
+            return BadRequest(new { Errors = errors });
+        }
+    }
+    [HttpPut("ChangeAvailable/{id}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> UpdateCouponAvailable(Guid id, UpdateCouponAvailableDTO req)
+    {
+        try
+        {
+            var curUserId = User.FindFirstValue("uid");
+            var user = await userManager.FindByIdAsync(curUserId!);
+            var curCoupon = await _appDbContext.Coupons.FirstOrDefaultAsync(x => x.Id == id);
+            if (curCoupon == null) return NotFound();
+            curCoupon.IsAvailable = req.IsAvailable;
+            _appDbContext.Coupons.Update(curCoupon);
+            await _appDbContext.SaveChangesAsync();
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            var errors = new[] { ex.Message };
+            return BadRequest(new { Errors = errors });
+        }
+
+    }
+    [HttpDelete("Delete/Selected")]
+    [Authorize(Roles = "Admin")]
+
+    public async Task<IActionResult> DeleteSelectedProduct(DeleteSelectedCouponDTO req)
+    {
+        try
+        {
+            if (req.SelectedCouponId == null || !req.SelectedCouponId.Any())
+            {
+                return NotFound();
+            }
+            // ดึงสินค้าที่ต้องการลบทั้งหมด
+            var selectedCoupons = await _appDbContext.Coupons
+                .Where(p => req.SelectedCouponId.Contains(p.Id))
+                .ToListAsync();
+
+            if (!selectedCoupons.Any())
+            {
+                return NotFound();
+            }
+            // ลบสินค้าที่ดึงมา
+            _appDbContext.Coupons.RemoveRange(selectedCoupons);
+            await _appDbContext.SaveChangesAsync();
+
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
             var errors = new[] { ex.Message };
             return BadRequest(new { Errors = errors });
         }
