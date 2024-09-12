@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WebShoppingAPI.DTOs.Request.Category;
+using WebShoppingAPI.DTOs.Request.Product;
 using WebShoppingAPI.DTOs.Response.Category;
 using WebShoppingAPI.Models;
 
@@ -27,6 +28,7 @@ public class CategoryController(AppDbContext appDbContext) : ControllerBase
             {
                 Name = c.Name,
                 Code = c.NormalizedName,
+                Description = c.Description,
                 Id = c.Id
             }).ToListAsync();
             return Ok(categories);
@@ -46,7 +48,7 @@ public class CategoryController(AppDbContext appDbContext) : ControllerBase
             var newCategory = new CategoryModel
             {
                 Name = req.Name,
-                NormalizedName = req.NormalizedName!.ToUpper(),
+                NormalizedName = req.CodeName!.ToUpper(),
                 Description = req.Description,
             };
             _appDbContext.Categories.Add(newCategory);
@@ -68,7 +70,7 @@ public class CategoryController(AppDbContext appDbContext) : ControllerBase
             var curCategory = await _appDbContext.Categories.FirstOrDefaultAsync(c => c.Id == id);
             if (curCategory == null) return NotFound();
             curCategory.Name = req.Name;
-            curCategory.NormalizedName = req.NormalizedName;
+            curCategory.NormalizedName = req.CodeName;
             curCategory.Description = req.Description;
             await _appDbContext.SaveChangesAsync();
             return NoContent();
@@ -88,6 +90,32 @@ public class CategoryController(AppDbContext appDbContext) : ControllerBase
             var curCategory = await _appDbContext.Categories.FirstOrDefaultAsync(c => c.Id == id);
             if (curCategory == null) return NotFound();
             _appDbContext.Categories.Remove(curCategory);
+            await _appDbContext.SaveChangesAsync();
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            var errors = new[] { ex.Message };
+            return BadRequest(new { Errors = errors });
+        }
+    }
+
+
+    [HttpDelete("Selected")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> DeleteCategories(DeleteSelectedCategoryDTO req)
+    {
+        try
+        {
+            // ดึง categories ทั้งหมดที่ตรงกับ [id] ที่ส่งมา 
+            var categoriesToDelete = await _appDbContext.Categories
+                .Where(c => req.CategoryId.Contains(c.Id))
+                .ToListAsync();
+
+            if (categoriesToDelete == null || !categoriesToDelete.Any())
+                return NotFound();
+
+            _appDbContext.Categories.RemoveRange(categoriesToDelete);
             await _appDbContext.SaveChangesAsync();
             return NoContent();
         }

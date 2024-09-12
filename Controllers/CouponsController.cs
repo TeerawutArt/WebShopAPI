@@ -20,6 +20,7 @@ public class CouponsController(AppDbContext appDbContext, UserManager<UserModel>
     private readonly AppDbContext _appDbContext = appDbContext;
     private readonly UserManager<UserModel> _userManager = userManager;
     private readonly PriceCalculateService _priceCalculate = priceCalculate;
+    private readonly TimeZoneInfo localeTimeZone = TimeZoneInfo.Local;
 
     [HttpPost]
     [Authorize(Roles = "Admin")]
@@ -91,8 +92,8 @@ public class CouponsController(AppDbContext appDbContext, UserManager<UserModel>
                 CouponCode = d.Code,
                 Amount = d.Amount,
                 UsedAmount = d.UsedCoupons.Count,
-                StartTime = d.StartTimeUTC,
-                EndTime = d.EndTimeUTC,
+                StartTime = TimeZoneInfo.ConvertTimeFromUtc(d.StartTimeUTC, localeTimeZone),
+                EndTime = TimeZoneInfo.ConvertTimeFromUtc(d.EndTimeUTC, localeTimeZone),
                 DiscountRate = d.Discount,
                 MaxDiscount = d.MaxDiscount,
                 MinimumPrice = d.MinimumPrice,
@@ -110,7 +111,7 @@ public class CouponsController(AppDbContext appDbContext, UserManager<UserModel>
 
     }
 
-    [HttpPost("Coupons/Order{id}")]
+    [HttpPost("Order/{id}")]
     [Authorize]
     public async Task<IActionResult> UseCoupon(Guid id, string CouponCode)
     {
@@ -262,7 +263,7 @@ public class CouponsController(AppDbContext appDbContext, UserManager<UserModel>
         try
         {
             var curUserId = User.FindFirstValue("uid");
-            var user = await userManager.FindByIdAsync(curUserId!);
+            var user = await _userManager.FindByIdAsync(curUserId!);
             var curCoupon = await _appDbContext.Coupons.FirstOrDefaultAsync(x => x.Id == id);
             if (curCoupon == null) return NotFound();
             curCoupon.IsAvailable = req.IsAvailable;
