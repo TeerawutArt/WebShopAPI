@@ -11,6 +11,10 @@ public class CartModel
     [ForeignKey("UserId")]
     public UserModel? Users { get; set; }
 
+    public Guid? CouponId { get; set; }
+    [ForeignKey("CouponId")]
+    public CouponModel? Coupon { get; set; }
+
     // one-to-many
     public ICollection<CartItemModel>? CartItems { get; set; }
 }
