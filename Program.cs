@@ -92,7 +92,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 app.UseHttpsRedirection();
-//upload image path ประมาณว่า //localhost:port/requestPath/fileName
+//hosting image path ประมาณว่า //localhost:port/requestPath/fileName
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider(
