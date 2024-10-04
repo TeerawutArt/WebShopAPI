@@ -11,7 +11,7 @@ public class PriceCalculateService
         {
             double discountPrice = (price * rate / 100);
             //maxDiscount จะเป็นกรณีที่มีการใช้คูปองส่วนลด 
-            newPrice = discountPrice > maxDiscount && maxDiscount != 0 ? newPrice = price - maxDiscount : newPrice = price - discountPrice; //(ternary operator)
+            newPrice = (discountPrice > maxDiscount && maxDiscount != 0) ? price - maxDiscount : price - discountPrice; //(ternary operator)
         }
         else
         {

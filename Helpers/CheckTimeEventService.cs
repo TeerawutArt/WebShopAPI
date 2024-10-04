@@ -85,7 +85,7 @@ namespace WebShoppingAPI.Helpers
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"เกิด error จากการดึงข้อมูล : {ex.Message}");
+                    Console.WriteLine($"เกิด error จากการดึงข้อมูล : {ex.Message}"); //log มันตรงๆนี่หละ
                 }
             }
         }
