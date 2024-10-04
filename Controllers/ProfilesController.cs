@@ -52,6 +52,7 @@ FileService fileService, IConfiguration iConfiguration) : ControllerBase
                 ReceiverName = a.Receiver,
                 ReceiverPhoneNumber = a.PhoneNumber,
                 AddressInfo = a.AddressInfo,
+                IsDefault = a.IsDefault
             }).ToList(),
 
         };
@@ -206,6 +207,32 @@ FileService fileService, IConfiguration iConfiguration) : ControllerBase
             curAddress.Receiver = req.ReceiverName;
             curAddress.PhoneNumber = req.ReceiverPhoneNumber;
             curAddress.AddressInfo = req.AddressInfo;
+            _appDbContext.Addresses.Update(curAddress);
+            await _appDbContext.SaveChangesAsync();
+            return NoContent();
+
+        }
+        catch (Exception ex)
+        {
+            var errors = new[] { ex.Message };
+            return BadRequest(new { Errors = errors });
+        }
+    }
+    [HttpPut("Address/Default/{id}")]
+    [Authorize]
+    public async Task<IActionResult> UpdateAddressDefault(Guid id, UpdateDefaultAddressDTO req)
+    {
+        try
+        {
+            var userId = User.FindFirstValue("uid");
+            UserModel? user = await _userManager.FindByIdAsync(userId!);
+            if (user is null)
+            {
+                var errors = new[] { "Invalid request or no permission" };
+                return BadRequest(new { Errors = errors });
+            }
+            var curAddress = await _appDbContext.Addresses.FirstOrDefaultAsync(a => a.UserId == user.Id && a.Id == id);
+            if (curAddress == null) return NotFound();
             curAddress.IsDefault = req.IsDefault;
             _appDbContext.Addresses.Update(curAddress);
             await _appDbContext.SaveChangesAsync();
@@ -217,14 +244,12 @@ FileService fileService, IConfiguration iConfiguration) : ControllerBase
                     foreach (var address in otherAddress)
                     {
                         address.IsDefault = false;
-
+                        //เปลี่ยน IsDefault ที่อยู่อื่นเป็น false
                     }
                     _appDbContext.Addresses.UpdateRange(otherAddress);
                     await _appDbContext.SaveChangesAsync();
                 }
             }
-            //เปลี่ยน IsDefault ที่อยู่อื่นเป็น false
-
 
             return NoContent();
 
