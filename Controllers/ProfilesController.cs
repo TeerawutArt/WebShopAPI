@@ -141,6 +141,8 @@ FileService fileService, IConfiguration iConfiguration) : ControllerBase
                 UserId = user.Id,
                 IsDefault = false,
             };
+            if (addressCount == 0) //ยังไม่มีที่อยู่
+            { newAddress.IsDefault = true; }
             _appDbContext.Addresses.Add(newAddress);
             await _appDbContext.SaveChangesAsync();
             return NoContent();
