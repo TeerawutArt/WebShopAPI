@@ -89,6 +89,7 @@ public class ProductsController(AppDbContext appDbContext, FileService fileServi
                     Id = pc.Category!.Id,
                     Name = pc.Category!.Name,
                     Code = pc.Category.NormalizedName,
+                    Description = pc.Category.Description,
                 }).ToList()
             }).ToListAsync();
             var res = new PagingDTO<ProductListDTO>
