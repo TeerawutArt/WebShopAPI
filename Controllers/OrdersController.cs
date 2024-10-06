@@ -26,6 +26,7 @@ public class OrdersController(AppDbContext appDbContext, UserManager<UserModel> 
     {
         try
         {
+            double totalTransportPrice = 0;
             //logic คือจะสร้าง Order เมื่อมีการกดสั่งซื้อ 
             UserModel? user = await _userManager.FindByIdAsync(User.FindFirstValue("uid")!);
             double ExpiryInDay = _iConfiguration.GetValue<double>("OrderExpiredInDay"); //จำนวนวันที่Order จะหมดอายุ
@@ -53,6 +54,7 @@ public class OrdersController(AppDbContext appDbContext, UserManager<UserModel> 
             {
                 // ค้นหาสินค้า
                 var product = await _appDbContext.Products.Include(p => p.Discount).FirstOrDefaultAsync(p => p.Id == item.ProductId);
+                double transportPrice = 0;
                 if (product is null)
                 {
                     var errors = new[] { "ไม่มีสินค้านี้" };
@@ -70,6 +72,7 @@ public class OrdersController(AppDbContext appDbContext, UserManager<UserModel> 
                 if (product.Discount != null)
                 {
                     DateTime curDate = DateTime.UtcNow;
+                    transportPrice = Math.Round(product.DiscountPrice * item.ProductQuantity) / 100; //มั่วสูตร
                     var discount = product.Discount;
                     if (curDate >= discount.StartTimeUTC && curDate < discount.EndTimeUTC && discount.IsDiscounted)
                     {
@@ -81,26 +84,32 @@ public class OrdersController(AppDbContext appDbContext, UserManager<UserModel> 
                             UnitPrice = product.DiscountPrice,
                             NetPrice = product.DiscountPrice * item.ProductQuantity
                         };
-                        totalPrice += product.DiscountPrice * item.ProductQuantity;
+                        totalPrice += (product.DiscountPrice * item.ProductQuantity) + transportPrice;
+                        totalTransportPrice += transportPrice;
 
                         _appDbContext.OrderProducts.Add(newOrderProduct);
                     }
                     else //หมดช่วงเวลาลดราคา หรือปิดการลดราคาไปแล้ว
                     {
+                        transportPrice = Math.Round(product.Price * item.ProductQuantity) / 100; //มั่วสูตร
                         var newOrderProduct = new OrderProductModel
                         {
                             OrderId = newOrder.Id,
                             ProductId = item.ProductId,
                             Quantity = item.ProductQuantity,
                             UnitPrice = product.Price,
-                            NetPrice = product.Price * item.ProductQuantity
+                            NetPrice = product.Price * item.ProductQuantity,
+
+
                         };
-                        totalPrice += product.Price * item.ProductQuantity;
+                        totalPrice += (product.DiscountPrice * item.ProductQuantity) + transportPrice;
+                        totalTransportPrice += transportPrice;
                         _appDbContext.OrderProducts.Add(newOrderProduct);
                     }
                 }
                 else //ไม่ได้ลดราคา
                 {
+                    transportPrice = Math.Round(product.Price * item.ProductQuantity) / 100; //มั่วสูตร
                     var newOrderProduct = new OrderProductModel
                     {
                         OrderId = newOrder.Id,
@@ -109,7 +118,8 @@ public class OrdersController(AppDbContext appDbContext, UserManager<UserModel> 
                         UnitPrice = product.Price,
                         NetPrice = product.Price * item.ProductQuantity
                     };
-                    totalPrice += product.Price * item.ProductQuantity;
+                    totalPrice += (product.DiscountPrice * item.ProductQuantity) + transportPrice;
+                    totalTransportPrice += transportPrice;
 
                     _appDbContext.OrderProducts.Add(newOrderProduct);
                 }
@@ -123,9 +133,10 @@ public class OrdersController(AppDbContext appDbContext, UserManager<UserModel> 
             //update totalPrice ให้ Order
             var curOrder = await _appDbContext.Orders.FirstOrDefaultAsync(o => o.Id == newOrder.Id);
             curOrder!.TotalPrice = totalPrice;
+            curOrder!.TransportPrice = totalTransportPrice;
             _appDbContext.Orders.Update(curOrder);
             await _appDbContext.SaveChangesAsync();
-            return NoContent();
+            return Ok(curOrder.Id); //ให้หลังบ้านส่ง order Id ที่สร้างไปด้วย
         }
         catch (Exception ex)
         {
@@ -133,6 +144,41 @@ public class OrdersController(AppDbContext appDbContext, UserManager<UserModel> 
             return BadRequest(new { Errors = errors });
         }
     }
+
+    [HttpGet("Products/{id}")]
+    [Authorize]
+    public async Task<IActionResult> GetOrderProduct(Guid id)
+    {
+        UserModel? user = await _userManager.FindByIdAsync(User.FindFirstValue("uid")!);
+        if (user is null)
+        {
+            var errors = new[] { "Invalid request or no permission" };
+            return BadRequest(new { Errors = errors });
+        }
+        var userRole = await _userManager.GetRolesAsync(user);
+        var order = await _appDbContext.Orders.FirstOrDefaultAsync(o => o.UserId == user.Id && o.Id == id);
+        if (order is null) return NotFound();
+        var curOrder = new OrderDTO
+        {
+            OrderId = order.Id,
+            TotalPrice = order.TotalPrice,
+            TransportPrice = order.TransportPrice,
+            OrderProducts = _appDbContext.Orders.Where(o => o.UserId == user.Id && o.Id == id).SelectMany(o => o.OrderProducts).Select(p => new OrderProductDTO
+            {
+                ProductId = p.ProductId,
+                ProductName = p.Product!.Name,
+                ProductImageURL = p.Product!.ProductImageURL,
+                UnitPrice = p.UnitPrice,
+                ProductOriginalPrice = p.Product.Price,
+                ProductQuantity = p.Quantity,
+                NetPrice = p.NetPrice,
+            }
+             ).ToList(),
+
+        };
+        return Ok(curOrder);
+    }
+
 
     [HttpGet]
     [Authorize]
@@ -165,6 +211,7 @@ public class OrdersController(AppDbContext appDbContext, UserManager<UserModel> 
                     NetPrice = p.NetPrice,
                 }
                  ).ToList(),
+                TransportPrice = order.TransportPrice,
                 TotalPrice = order.TotalPrice,
             };
             return Ok(curOrder);
@@ -172,16 +219,18 @@ public class OrdersController(AppDbContext appDbContext, UserManager<UserModel> 
         if (userRole.Any(role => role == "Admin") || userRole.Any(role => role == "Sale"))
         {
             //staff or admin role ShowAllOrder
-            List<OrderDTO> orders = await _appDbContext.Orders.Select(order => new OrderDTO
+            List<OrderDTO> orders = await _appDbContext.Orders.Include(o => o.Users).Select(order => new OrderDTO
             {
                 OrderId = order.Id,
                 UserId = order.UserId,
+                OrderUserName = order.Users!.FirstName + ' ' + order.Users.LastName,
                 OrderTime = order.OrderTimeUTC,
                 ExpiryTime = order.ExpiryTimeUTC,
                 TransactionTime = order.TransactionTimeUTC,
                 IsSuccess = order.IsPaid,
                 Status = order.Status,
                 TransportInfo = order.TransportInfo,
+                TransportPrice = order.TransportPrice,
                 TotalPrice = order.TotalPrice,
             }).ToListAsync();
             return Ok(orders);

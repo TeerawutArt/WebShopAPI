@@ -12,8 +12,8 @@ public class CartItemDTO
     public string? Description { get; set; }
     public Guid? DiscountId { get; set; }
     public double ProductPrice { get; set; }
-    public int ProductTotalAmount { get; set; }
     public double ProductDiscountPrice { get; set; }
+    public int ProductTotalAmount { get; set; }
     public int Quantity { get; set; }
 
 }

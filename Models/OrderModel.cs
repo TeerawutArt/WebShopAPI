@@ -11,6 +11,8 @@ public class OrderModel
     public bool IsPaid { get; set; }
     public string? Status { get; set; } //สำเร็จ,อยู่ระหว่างขนส่ง,ยกเลิก,ฯลฯ
     public string? TransportInfo { get; set; } //เก็บพวกรหัสค้นหามั้ง
+
+    public double TransportPrice { get; set; }
     public double TotalPrice { get; set; }
 
     public DateTime TransactionTimeUTC { get; set; }
