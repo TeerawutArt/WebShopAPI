@@ -110,10 +110,41 @@ public class CouponsController(AppDbContext appDbContext, UserManager<UserModel>
         }
 
     }
+    [HttpGet("Used")]
+    [Authorize]
+    public async Task<IActionResult> GetUsedCoupon([FromQuery] GetCouponByOrderDTO req)
+    {
+        try
+        {
+            UserModel? user = await _userManager.FindByIdAsync(User.FindFirstValue("uid")!);
+            if (user is null)
+            {
+                var errors = new[] { "Invalid request or no permission" };
+                return BadRequest(new { Errors = errors });
+            }
+            var usedCoupon = await _appDbContext.UsedCoupons.Where(uc => uc.UserId == user.Id && uc.OrderId == req.OrderId).Include(uc => uc.Coupon).Select(uc => new GetUsedCouponDTO
+            {
+                CouponId = uc.CouponId,
+                CouponCode = uc.Coupon!.Code,
+                CouponName = uc.Coupon.Name,
+                Description = uc.Coupon.Description,
+                DiscountRate = uc.Coupon.Discount,
+                IsDiscountPercent = uc.Coupon.IsDiscountPercent,
+                MaxDiscount = uc.Coupon.MaxDiscount,
+                MinimumPrice = uc.Coupon.MinimumPrice,
+            }).ToListAsync();
+            return Ok(usedCoupon);
+        }
 
+        catch (Exception ex)
+        {
+            var errors = new[] { ex.Message };
+            return BadRequest(new { Errors = errors });
+        }
+    }
     [HttpPost("Order/{id}")]
     [Authorize]
-    public async Task<IActionResult> UseCoupon(Guid id, string CouponCode)
+    public async Task<IActionResult> UseCoupon(Guid id, UseCouponCodeDTO req)
     {
         using var transaction = await _appDbContext.Database.BeginTransactionAsync();
         try
@@ -126,9 +157,14 @@ public class CouponsController(AppDbContext appDbContext, UserManager<UserModel>
                 return BadRequest(new { Errors = errors });
             }
 
-            var curCoupon = await _appDbContext.Coupons.Include(uc => uc.UsedCoupons).FirstOrDefaultAsync(c => c.Code == CouponCode);
-            if (curCoupon == null) return NotFound();
 
+            var curCoupon = await _appDbContext.Coupons.Include(uc => uc.UsedCoupons).FirstOrDefaultAsync(c => c.Code == req.CouponCode);
+            if (curCoupon == null) return NotFound("ไม่มีคูปองนี้");
+            if (curCoupon.UsedCoupons.Any(uc => uc.OrderId == id && uc.UserId == user.Id))
+            {
+                var errors = new[] { "คุณใช้คูปองนี้ไปแล้ว" };
+                return BadRequest(new { Errors = errors });
+            }
             if (curCoupon.Amount <= curCoupon.UsedCoupons.Count)
             {
                 var errors = new[] { "คูปองถูกใช้หมดแล้ว" };
@@ -139,11 +175,7 @@ public class CouponsController(AppDbContext appDbContext, UserManager<UserModel>
                 var errors = new[] { "คูปองไม่สามารถใช้งานได้แล้ว" };
                 return BadRequest(new { Errors = errors });
             }
-            if (curCoupon.UsedCoupons.Any(uc => uc.OrderId == id && uc.UserId == user.Id))
-            {
-                var errors = new[] { "คุณใช้คูปองไปแล้ว" };
-                return BadRequest(new { Errors = errors });
-            }
+
             //เช็คว่า Order นี้ ใช้คูปองไปแล้วหรือยัง 1 Order 1 คูปอง
             var isOrderUseCoupon = await _appDbContext.UsedCoupons.AnyAsync(uc => uc.OrderId == id);
             if (isOrderUseCoupon)
@@ -172,8 +204,8 @@ public class CouponsController(AppDbContext appDbContext, UserManager<UserModel>
                 var errors = new[] { $"ราคาขั้นต่ำที่สามารถใช้คูปองได้: {curCoupon.MinimumPrice} บาท" };
                 return BadRequest(new { Errors = errors });
             }
-
-            targetOrder.TotalPrice = _priceCalculate.DiscountPrice(targetOrder.TotalPrice, curCoupon.Discount, curCoupon.IsDiscountPercent, curCoupon.MaxDiscount);
+            targetOrder.UsedCoupon = true;
+            targetOrder.NetPrice = _priceCalculate.DiscountPrice(targetOrder.NetPrice, curCoupon.Discount, curCoupon.IsDiscountPercent, curCoupon.MaxDiscount);
             var useCoupon = new UsedCouponModel
             {
                 CouponId = curCoupon.Id,
@@ -184,11 +216,37 @@ public class CouponsController(AppDbContext appDbContext, UserManager<UserModel>
             await _appDbContext.SaveChangesAsync();
             await transaction.CommitAsync(); //ถ้าไม่เกิดerror ระหว่างทาง ค่อยยืนยันการเปลี่ยนแปลง
 
-            return NoContent();
+            return Ok(targetOrder.NetPrice);
         }
         catch (Exception ex)
         {
             await transaction.RollbackAsync(); //ถ้าเกิด error จะย้อนกลับค่าทุกอย่างที่ track ไว้จาก  BeginTransactionAsync
+            var errors = new[] { ex.Message };
+            return BadRequest(new { Errors = errors });
+        }
+    }
+    [HttpDelete("Order/{id}")]
+    [Authorize]
+    public async Task<IActionResult> CancelUsedCoupon(Guid id)
+    {
+        try
+        {
+            UserModel? user = await _userManager.FindByIdAsync(User.FindFirstValue("uid")!);
+            if (user is null)
+            {
+                var errors = new[] { "Invalid request or no permission" };
+                return BadRequest(new { Errors = errors });
+            }
+            var usedCoupon = await _appDbContext.UsedCoupons.Include(uc => uc.Order).FirstOrDefaultAsync(uc => uc.OrderId == id);
+            if (usedCoupon == null) return NotFound();
+            usedCoupon.Order!.NetPrice = usedCoupon.Order!.TotalPrice + usedCoupon.Order!.TransportPrice;  //ปรับราคากลับเป็นเท่าเดิม
+            usedCoupon.Order!.UsedCoupon = false;
+            _appDbContext.Remove(usedCoupon);
+            await _appDbContext.SaveChangesAsync();
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
             var errors = new[] { ex.Message };
             return BadRequest(new { Errors = errors });
         }

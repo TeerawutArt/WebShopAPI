@@ -86,6 +86,7 @@ FileService fileService, IConfiguration iConfiguration) : ControllerBase
                 user.Email = req.Email;
                 user.FirstName = req.FirstName;
                 user.LastName = req.LastName;
+                user.BirthDate = DateTime.Parse(req.BirthDate!);
                 user.PhoneNumber = req.PhoneNumber;
                 user.Gender = req.Gender;
                 user.UserImageURL = createdImageName;
@@ -101,6 +102,7 @@ FileService fileService, IConfiguration iConfiguration) : ControllerBase
             user.Email = req.Email;
             user.FirstName = req.FirstName;
             user.LastName = req.LastName;
+            user.BirthDate = DateTime.Parse(req.BirthDate!);
             user.PhoneNumber = req.PhoneNumber;
             user.Gender = req.Gender;
         }

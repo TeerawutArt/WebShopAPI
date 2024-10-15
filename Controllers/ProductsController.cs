@@ -111,7 +111,7 @@ public class ProductsController(AppDbContext appDbContext, FileService fileServi
 
     }
 
-    [HttpGet("ProductDetail/Product{id}")]
+    [HttpGet("{id}")]
     public async Task<IActionResult> GetProductDetail(Guid id)
     {
         try
@@ -127,8 +127,9 @@ public class ProductsController(AppDbContext appDbContext, FileService fileServi
             //ตรวจสอบ Product ว่ามีอยู่ไหม (role customer ไม่โชว์ หรือติ้กไม่โชว์)
             if (userRole.Any(role => role == "Customer"))
             {
-                var products = await _appDbContext.Products.Where(p => p.Id == id).Select(row => new ProductDTO
+                var products = await _appDbContext.Products.Where(p => p.Id == id).Include(p => p.Discount).Select(row => new ProductDTO
                 {
+                    ProductId = row.Id,
                     ProductImageURL = row.ProductImageURL,
                     ProductName = row.Name,
                     ProductDescription = row.Description,
@@ -159,7 +160,7 @@ public class ProductsController(AppDbContext appDbContext, FileService fileServi
             }
             else
             {
-                var products = await _appDbContext.Products.Where(p => p.Id == id).Select(row => new ProductDTO
+                var products = await _appDbContext.Products.Where(p => p.Id == id).Include(p => p.Discount).Select(row => new ProductDTO
                 {
                     ProductId = row.Id,
                     ProductImageURL = row.ProductImageURL,

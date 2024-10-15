@@ -19,6 +19,7 @@ public class OrdersController(AppDbContext appDbContext, UserManager<UserModel> 
     private readonly AppDbContext _appDbContext = appDbContext;
     private readonly UserManager<UserModel> _userManager = userManager;
     private readonly IConfiguration _iConfiguration = iConfiguration;
+    private readonly TimeZoneInfo localeTimeZone = TimeZoneInfo.Local;
 
     [HttpPost]
     [Authorize]
@@ -42,7 +43,8 @@ public class OrdersController(AppDbContext appDbContext, UserManager<UserModel> 
                 Status = "รอชำระเงิน",
                 UserId = user.Id,
                 TransportInfo = "",
-                IsPaid = false
+                IsPaid = false,
+
             };
             //save เพื่อ gen Order Id
             _appDbContext.Orders.Add(newOrder);
@@ -84,7 +86,7 @@ public class OrdersController(AppDbContext appDbContext, UserManager<UserModel> 
                             UnitPrice = product.DiscountPrice,
                             NetPrice = product.DiscountPrice * item.ProductQuantity
                         };
-                        totalPrice += (product.DiscountPrice * item.ProductQuantity) + transportPrice;
+                        totalPrice += (product.DiscountPrice * item.ProductQuantity);
                         totalTransportPrice += transportPrice;
 
                         _appDbContext.OrderProducts.Add(newOrderProduct);
@@ -102,7 +104,7 @@ public class OrdersController(AppDbContext appDbContext, UserManager<UserModel> 
 
 
                         };
-                        totalPrice += (product.DiscountPrice * item.ProductQuantity) + transportPrice;
+                        totalPrice += (product.DiscountPrice * item.ProductQuantity);
                         totalTransportPrice += transportPrice;
                         _appDbContext.OrderProducts.Add(newOrderProduct);
                     }
@@ -118,7 +120,8 @@ public class OrdersController(AppDbContext appDbContext, UserManager<UserModel> 
                         UnitPrice = product.Price,
                         NetPrice = product.Price * item.ProductQuantity
                     };
-                    totalPrice += (product.DiscountPrice * item.ProductQuantity) + transportPrice;
+                    totalPrice += (product.DiscountPrice * item.ProductQuantity);
+
                     totalTransportPrice += transportPrice;
 
                     _appDbContext.OrderProducts.Add(newOrderProduct);
@@ -134,6 +137,7 @@ public class OrdersController(AppDbContext appDbContext, UserManager<UserModel> 
             var curOrder = await _appDbContext.Orders.FirstOrDefaultAsync(o => o.Id == newOrder.Id);
             curOrder!.TotalPrice = totalPrice;
             curOrder!.TransportPrice = totalTransportPrice;
+            curOrder!.NetPrice = totalPrice + totalTransportPrice;
             _appDbContext.Orders.Update(curOrder);
             await _appDbContext.SaveChangesAsync();
             return Ok(curOrder.Id); //ให้หลังบ้านส่ง order Id ที่สร้างไปด้วย
@@ -149,102 +153,231 @@ public class OrdersController(AppDbContext appDbContext, UserManager<UserModel> 
     [Authorize]
     public async Task<IActionResult> GetOrderProduct(Guid id)
     {
-        UserModel? user = await _userManager.FindByIdAsync(User.FindFirstValue("uid")!);
-        if (user is null)
+        try
         {
-            var errors = new[] { "Invalid request or no permission" };
-            return BadRequest(new { Errors = errors });
-        }
-        var userRole = await _userManager.GetRolesAsync(user);
-        var order = await _appDbContext.Orders.FirstOrDefaultAsync(o => o.UserId == user.Id && o.Id == id);
-        if (order is null) return NotFound();
-        var curOrder = new OrderDTO
-        {
-            OrderId = order.Id,
-            TotalPrice = order.TotalPrice,
-            TransportPrice = order.TransportPrice,
-            OrderProducts = _appDbContext.Orders.Where(o => o.UserId == user.Id && o.Id == id).SelectMany(o => o.OrderProducts).Select(p => new OrderProductDTO
+            UserModel? user = await _userManager.FindByIdAsync(User.FindFirstValue("uid")!);
+            if (user is null)
             {
-                ProductId = p.ProductId,
-                ProductName = p.Product!.Name,
-                ProductImageURL = p.Product!.ProductImageURL,
-                UnitPrice = p.UnitPrice,
-                ProductOriginalPrice = p.Product.Price,
-                ProductQuantity = p.Quantity,
-                NetPrice = p.NetPrice,
+                var errors = new[] { "Invalid request or no permission" };
+                return BadRequest(new { Errors = errors });
             }
-             ).ToList(),
-
-        };
-        return Ok(curOrder);
-    }
-
-
-    [HttpGet]
-    [Authorize]
-    public async Task<IActionResult> GetOrders()
-    {
-        UserModel? user = await _userManager.FindByIdAsync(User.FindFirstValue("uid")!);
-        if (user is null)
-        {
-            var errors = new[] { "Invalid request or no permission" };
-            return BadRequest(new { Errors = errors });
-        }
-        var userRole = await _userManager.GetRolesAsync(user);
-        if (userRole.Any(role => role == "Customer"))
-        {
-            var order = await _appDbContext.Orders.FirstOrDefaultAsync(o => o.UserId == user.Id);
+            var userRole = await _userManager.GetRolesAsync(user);
+            var order = await _appDbContext.Orders.FirstOrDefaultAsync(o => o.UserId == user.Id && o.Id == id);
             if (order is null) return NotFound();
-            var curOrder = new OrderDTO
+            var curOrder = new OrderSmallDetailDTO
             {
-                OrderTime = order.OrderTimeUTC,
-                ExpiryTime = order.ExpiryTimeUTC,
-                TransactionTime = order.TransactionTimeUTC,
-                IsSuccess = order.IsPaid,
+                OrderId = order.Id,
+                TotalPrice = order.TotalPrice,
+                TransportPrice = order.TransportPrice,
+                OrderTime = TimeZoneInfo.ConvertTimeFromUtc(order.OrderTimeUTC, localeTimeZone),
+                ExpiryTime = TimeZoneInfo.ConvertTimeFromUtc(order.ExpiryTimeUTC, localeTimeZone),
                 Status = order.Status,
-                TransportInfo = order.TransportInfo,
-                OrderProducts = _appDbContext.Orders.Where(o => o.UserId == user.Id).SelectMany(o => o.OrderProducts).Select(p => new OrderProductDTO
+                UsedCoupon = order.UsedCoupon,
+                IsPaid = order.IsPaid,
+                NetPrice = order.NetPrice,
+                OrderProducts = _appDbContext.Orders.Where(o => o.UserId == user.Id && o.Id == id).SelectMany(o => o.OrderProducts).Select(p => new OrderProductDTO
                 {
+                    OrderId = p.OrderId,
+                    ProductId = p.ProductId,
                     ProductName = p.Product!.Name,
+                    ProductImageURL = p.Product!.ProductImageURL,
                     UnitPrice = p.UnitPrice,
+                    ProductOriginalPrice = p.Product.Price,
                     ProductQuantity = p.Quantity,
                     NetPrice = p.NetPrice,
                 }
                  ).ToList(),
-                TransportPrice = order.TransportPrice,
-                TotalPrice = order.TotalPrice,
             };
             return Ok(curOrder);
         }
-        if (userRole.Any(role => role == "Admin") || userRole.Any(role => role == "Sale"))
+        catch (Exception ex)
         {
-            //staff or admin role ShowAllOrder
-            List<OrderDTO> orders = await _appDbContext.Orders.Include(o => o.Users).Select(order => new OrderDTO
-            {
-                OrderId = order.Id,
-                UserId = order.UserId,
-                OrderUserName = order.Users!.FirstName + ' ' + order.Users.LastName,
-                OrderTime = order.OrderTimeUTC,
-                ExpiryTime = order.ExpiryTimeUTC,
-                TransactionTime = order.TransactionTimeUTC,
-                IsSuccess = order.IsPaid,
-                Status = order.Status,
-                TransportInfo = order.TransportInfo,
-                TransportPrice = order.TransportPrice,
-                TotalPrice = order.TotalPrice,
-            }).ToListAsync();
-            return Ok(orders);
-        }
-        else
-        {//ดักไว้
-            var errors = new[] { "Invalid request or no permission" };
+            var errors = new[] { ex.Message };
             return BadRequest(new { Errors = errors });
         }
     }
+
+
+    [HttpGet("{id}")]
+    [Authorize]
+    public async Task<IActionResult> GetOrders(Guid id)
+    {
+        try
+        {
+            UserModel? user = await _userManager.FindByIdAsync(User.FindFirstValue("uid")!);
+            if (user is null)
+            {
+                var errors = new[] { "Invalid request or no permission" };
+                return BadRequest(new { Errors = errors });
+            }
+            var userRole = await _userManager.GetRolesAsync(user);
+            var order = await _appDbContext.Orders.FirstOrDefaultAsync(o => o.UserId == user.Id && o.Id == id);
+            if (order is null) return NotFound();
+            var curOrder = new OrderDTO
+            {
+                OrderId = order.Id,
+                OrderUserName = order.Users!.FirstName + ' ' + order.Users.LastName,
+                TransportInfo = order.TransportInfo,
+                TotalPrice = order.TotalPrice,
+                TransportPrice = order.TransportPrice,
+                OrderTime = TimeZoneInfo.ConvertTimeFromUtc(order.OrderTimeUTC, localeTimeZone),
+                ExpiryTime = TimeZoneInfo.ConvertTimeFromUtc(order.ExpiryTimeUTC, localeTimeZone),
+                TransactionTime = TimeZoneInfo.ConvertTimeFromUtc(order.TransactionTimeUTC, localeTimeZone),
+                Status = order.Status,
+                UsedCoupon = order.UsedCoupon,
+                IsPaid = order.IsPaid,
+                NetPrice = order.NetPrice,
+                OrderProducts = _appDbContext.Orders.Where(o => o.UserId == user.Id && o.Id == id).SelectMany(o => o.OrderProducts).Select(p => new OrderProductDTO
+                {
+                    OrderId = p.OrderId,
+                    ProductId = p.ProductId,
+                    ProductName = p.Product!.Name,
+                    ProductImageURL = p.Product!.ProductImageURL,
+                    UnitPrice = p.UnitPrice,
+                    ProductOriginalPrice = p.Product.Price,
+                    ProductQuantity = p.Quantity,
+                    NetPrice = p.NetPrice,
+                }
+            ).ToList(),
+            };
+            return Ok(curOrder);
+        }
+
+        catch (Exception ex)
+        {
+            var errors = new[] { ex.Message };
+            return BadRequest(new { Errors = errors });
+        }
+    }
+
+    [HttpGet("Profile")]
+    [Authorize]
+    public async Task<IActionResult> GetProfileOrder([FromQuery] GetPagingOrderDTO req)
+    {
+        try
+        {
+            UserModel? user = await _userManager.FindByIdAsync(User.FindFirstValue("uid")!);
+            if (user is null)
+            {
+                var errors = new[] { "Invalid request or no permission" };
+                return BadRequest(new { Errors = errors });
+            }
+            var userRole = await _userManager.GetRolesAsync(user);
+            var order = await _appDbContext.Orders.FirstOrDefaultAsync(o => o.UserId == user.Id);
+            if (order is null) return NotFound();
+            var totalRecords = await _appDbContext.Orders.CountAsync();
+            var pageIndex = req.PageIndex;
+            var pageSize = req.PageSize;
+            var skipRecords = (pageIndex - 1) * pageSize;
+            List<OrderSmallDetailDTO> orders = await _appDbContext.Orders.Where(o => o.UserId == user.Id).Include(o => o.Users).Skip(skipRecords).Take(pageSize).Select(order => new OrderSmallDetailDTO
+            {
+                OrderId = order.Id,
+                OrderTime = TimeZoneInfo.ConvertTimeFromUtc(order.OrderTimeUTC, localeTimeZone),
+                ExpiryTime = TimeZoneInfo.ConvertTimeFromUtc(order.ExpiryTimeUTC, localeTimeZone),
+                IsPaid = order.IsPaid,
+                Status = order.Status,
+                UsedCoupon = order.UsedCoupon,
+                TransportPrice = order.TransportPrice,
+                TotalPrice = order.TotalPrice,
+                NetPrice = order.NetPrice,
+            }).ToListAsync();
+            //เหมือน db sqlite จะ loop ใน _appdb.. toListAsync ไม่ได้ ต้องแยก
+            orders.ForEach(os =>
+            {
+                os.OrderProducts = _appDbContext.Orders.Where(o => o.UserId == user.Id && o.Id == os.OrderId).SelectMany(o => o.OrderProducts).Select(p => new OrderProductDTO
+                {
+                    OrderId = p.OrderId,
+                    ProductId = p.ProductId,
+                    ProductName = p.Product!.Name,
+                    ProductImageURL = p.Product!.ProductImageURL,
+                    UnitPrice = p.UnitPrice,
+                    ProductQuantity = p.Quantity,
+                    NetPrice = p.NetPrice,
+                }).ToList();
+            });
+            var res = new PagingDTO<OrderSmallDetailDTO>
+            {
+                TotalRecords = totalRecords,
+                Items = orders
+            };
+            return Ok(res);
+        }
+
+        catch (Exception ex)
+        {
+            var errors = new[] { ex.Message };
+            return BadRequest(new { Errors = errors });
+        }
+    }
+
+    [HttpGet("Manage")]
+    [Authorize(Roles = "Sale,Admin")]
+    public async Task<IActionResult> GetOrdersForAdmin()
+    {
+        try
+        {
+            UserModel? user = await _userManager.FindByIdAsync(User.FindFirstValue("uid")!);
+            if (user is null)
+            {
+                var errors = new[] { "Invalid request or no permission" };
+                return BadRequest(new { Errors = errors });
+            }
+            var userRole = await _userManager.GetRolesAsync(user);
+            if (userRole.Any(role => role == "Admin") || userRole.Any(role => role == "Sale"))
+            {
+                //staff or admin role ShowAllOrder
+                List<OrderDTO> orders = await _appDbContext.Orders.Include(o => o.Users).Select(order => new OrderDTO
+                {
+                    OrderId = order.Id,
+                    UserId = order.UserId,
+                    OrderUserName = order.Users!.FirstName + ' ' + order.Users.LastName,
+                    OrderTime = TimeZoneInfo.ConvertTimeFromUtc(order.OrderTimeUTC, localeTimeZone),
+                    ExpiryTime = TimeZoneInfo.ConvertTimeFromUtc(order.ExpiryTimeUTC, localeTimeZone),
+                    TransactionTime = TimeZoneInfo.ConvertTimeFromUtc(order.TransactionTimeUTC, localeTimeZone),
+                    IsPaid = order.IsPaid,
+                    UsedCoupon = order.UsedCoupon,
+                    Status = order.Status,
+                    TransportInfo = order.TransportInfo,
+                    TransportPrice = order.TransportPrice,
+                    TotalPrice = order.TotalPrice,
+                    NetPrice = order.NetPrice,
+                }).ToListAsync();
+                //เหมือน db sqlite จะ loop ใน _appdb.. toListAsync ไม่ได้ ต้องแยก
+                orders.ForEach(os =>
+                {
+                    os.OrderProducts = _appDbContext.Orders.Where(o => o.UserId == user.Id && o.Id == os.OrderId).SelectMany(o => o.OrderProducts).Select(p => new OrderProductDTO
+                    {
+                        OrderId = p.OrderId,
+                        ProductId = p.ProductId,
+                        ProductName = p.Product!.Name,
+                        ProductImageURL = p.Product!.ProductImageURL,
+                        UnitPrice = p.UnitPrice,
+                        ProductQuantity = p.Quantity,
+                        NetPrice = p.NetPrice,
+                    }).ToList();
+                });
+                return Ok(orders);
+            }
+            else
+            {//ดักไว้
+                var errors = new[] { "Invalid request or no permission" };
+                return BadRequest(new { Errors = errors });
+            }
+        }
+        catch (Exception ex)
+        {
+            var errors = new[] { ex.Message };
+            return BadRequest(new { Errors = errors });
+        }
+
+    }
+
     [HttpPost("Confirm")]
     [Authorize]
-    public async Task<IActionResult> ConfirmOrder(ConfirmOrderDTO req, bool transaction)
+    public async Task<IActionResult> ConfirmOrder(ConfirmOrderDTO req)
     {
+
+        await using var dbTransaction = await _appDbContext.Database.BeginTransactionAsync(); //ถ้าเกิด error กลางทางให้ rollback ค่าทั้งหมด
         try
         {
             var curOrder = await _appDbContext.Orders.Include(o => o.OrderProducts)
@@ -254,12 +387,13 @@ public class OrdersController(AppDbContext appDbContext, UserManager<UserModel> 
                 var errors = new[] { "ไม่พบ Order ที่ชำระเงินกรุณาติดต่อผู้ดูแลระบบ" };
                 return BadRequest(new { Errors = errors });
             }
-            if (curOrder.ExpiryTimeUTC > DateTime.UtcNow)
+            if (DateTime.UtcNow > curOrder.ExpiryTimeUTC)
             {
                 curOrder.Status = "เลยกำหนดชำระเงิน";
                 var errors = new[] { "คำสั่งซื้อถูกยกเลิกเนื่องจากเลยเวลาชำระเงิน" }; //ตรงนี้ให้หน้าบ้านฟ้องสาเหตุ :คำสั่งซื้อถูกยกเลิกเนื่องจากเลยเวลาชำระเงิน
                 return BadRequest(new { Errors = errors });
             }
+
             //ตรงนี้ตรวจว่ายังมีสินค้าพอที่จะซื้อหรือเปล่า (ตรวจมันหลายๆรอบนี่หละ)
             List<string> insufficientProductsName = new(); // เก็บชื่อสินค้าที่จำนวนไม่พอ
             foreach (var orderProduct in curOrder.OrderProducts)
@@ -279,12 +413,14 @@ public class OrdersController(AppDbContext appDbContext, UserManager<UserModel> 
                 var errors = new[] { $"รายการสินค้าที่มีจำนวนไม่เพียงพอมีดังนี้: {string.Join(", ", insufficientProductsName)}" };
                 return BadRequest(new { Errors = errors });
             }
-            //ผ่านทุกเงื่อนไข ก็มาเช็คการทำธุรกรรมต่อ 
-            if (transaction)
+
+            //ผ่านทุกเงื่อนไข ก็มาเช็คการทำธุรกรรมต่อ (สมมุติว่าผ่าน)
+            if (req.Transaction)
             {
                 curOrder!.IsPaid = true;
                 curOrder!.Status = "อยู่ระหว่างจัดส่ง";
                 curOrder!.TransactionTimeUTC = DateTime.UtcNow;
+                curOrder!.TransportInfo = req.AddressInfo;
 
                 foreach (var orderProduct in curOrder.OrderProducts)
                 {
@@ -296,11 +432,13 @@ public class OrdersController(AppDbContext appDbContext, UserManager<UserModel> 
                         // ลดจำนวนสินค้า (สาเหตุที่ลดตรงนี้ไม่ใช่ตอนสั่งOrder เพราะกันพวกกั๊กของไว้ไม่ยอมจ่ายเงิน)
                         product.TotalAmount -= orderProduct.Quantity;
                         //เปลี่ยนแปลงสถานะสินค้าถ้าของหมด
-                        product.IsAvailable = product.TotalAmount <= 0;
+                        product.IsAvailable = product.TotalAmount > 0;
                     }
                 }
+
                 //ไม่ต้องอัปเดท เพราะเมื่อใช้ Include EF จะTrack การเปลี่ยนแปลงและอัปเดทอัตโนมัติเมื่อ save
                 await _appDbContext.SaveChangesAsync();
+                await dbTransaction.CommitAsync(); // Commit transaction เมื่อทำงานสำเร็จทั้งหมด
                 return Ok(true);
             }
             else
@@ -312,11 +450,12 @@ public class OrdersController(AppDbContext appDbContext, UserManager<UserModel> 
         }
         catch (Exception ex)
         {
+            await dbTransaction.RollbackAsync(); // Rollback การเปลี่ยนแปลงถ้ามี error เกิดขึ้น
             var errors = new[] { ex.Message };
             return BadRequest(new { Errors = errors });
         }
-
     }
+
     [HttpPut("Detail/{id}")]
     [Authorize(Roles = "Sale,Admin")]
     public async Task<IActionResult> UpdateOrder(Guid id, UpdateOrderProductDTO req)

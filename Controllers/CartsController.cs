@@ -80,6 +80,7 @@ public class CartsController(AppDbContext appDbContext, UserManager<UserModel> u
         try
         {
             UserModel? user = await _userManager.FindByIdAsync(User.FindFirstValue("uid")!);
+            if (user is null) return NotFound();
             var cart = await _appDbContext.Carts.Include(c => c.CartItems!).ThenInclude(c => c.Product).FirstOrDefaultAsync(c => c.UserId == user!.Id);
             //ThenInclude คือ Include เข้าไปใน Include อีกที
             if (cart is null) return NotFound();

@@ -18,6 +18,7 @@ public class UpdateUserDTO
 
     [Required(ErrorMessage = "กรุณากรอกอีเมล"), EmailAddress(ErrorMessage = "รูปแบบอีเมลไม่ถูกต้อง")]
     public required string Email { get; set; }
+    public string? BirthDate { get; set; } //ส่งมาเป็น string เพราะเรื่องของ multiform ค่อยไปแปลงเอา
 
     [Required(ErrorMessage = "กรุณาเบอร์โทรศัพท์")]
     public required string PhoneNumber { get; set; }

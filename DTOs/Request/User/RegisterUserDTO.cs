@@ -27,7 +27,7 @@ public class RegisterUserDTO
     [Required(ErrorMessage = "กรุณาระบุเพศ")]
     public required string Gender { get; set; }
     [Required(ErrorMessage = "กรุณาระบุวันเกิด")]
-    public string? BirthDate { get; set; }
+    public string? BirthDate { get; set; } //ส่งมาเป็น string เพราะเรื่องของ multiform ค่อยไปแปลงเอา
     [Required(ErrorMessage = "กรุณากรอกรหัสผ่าน"),
     MinLength(5, ErrorMessage = "รหัสผ่านต้องมีความยาวมากกว่า 5 ตัวอักษร"),
     MaxLength(20, ErrorMessage = "รหัสผ่านต้องไม่เกิน 20 ตัวอักษร")]
