@@ -3,8 +3,10 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using WebShoppingAPI.DTOs.Request;
 using WebShoppingAPI.DTOs.Request.Category;
 using WebShoppingAPI.DTOs.Request.Product;
+using WebShoppingAPI.DTOs.Response;
 using WebShoppingAPI.DTOs.Response.Category;
 using WebShoppingAPI.Models;
 
@@ -20,18 +22,34 @@ public class CategoryController(AppDbContext appDbContext) : ControllerBase
 
 
     [HttpGet]
-    public async Task<IActionResult> GetCategory()
+    public async Task<IActionResult> GetCategory([FromQuery] DefaultPagingDTO req)
     {
         try
         {
-            var categories = await _appDbContext.Categories.Select(c => new CategoriesDTO
+            var query = _appDbContext.Categories.AsQueryable();
+            var pageIndex = req.PageIndex;
+            var pageSize = req.PageSize;
+            var skipRecords = (pageIndex - 1) * pageSize;
+            var totalRecords = await _appDbContext.Categories.CountAsync();
+            if (!string.IsNullOrWhiteSpace(req.Keyword)) //IsNullOrWhiteSpace คือ ไม่เอา spacebar ด้วย
+            {
+                query = query.Where(c => c.Name!.ToLower().Contains(req.Keyword.ToLower())  //Contains มีอักษรบางส่วน
+                || c.NormalizedName!.ToLower().Contains(req.Keyword.ToLower())
+                || c.Description!.ToLower().Contains(req.Keyword.ToLower()));
+            }
+            var categories = await query.Skip(skipRecords).Take(pageSize).Select(c => new CategoriesDTO
             {
                 Name = c.Name,
                 Code = c.NormalizedName,
                 Description = c.Description,
                 Id = c.Id
             }).ToListAsync();
-            return Ok(categories);
+            var res = new PagingDTO<CategoriesDTO>
+            {
+                TotalRecords = totalRecords,
+                Items = categories
+            };
+            return Ok(res);
         }
         catch (Exception ex)
         {

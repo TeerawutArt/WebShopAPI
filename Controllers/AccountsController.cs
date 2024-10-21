@@ -27,9 +27,6 @@ public class AccountsController(UserManager<UserModel> userManager, TokenHelper 
     [HttpPost("Register")]
     public async Task<IActionResult> RegisterUser(RegisterUserDTO req)
     {
-        //แปลงเวลา locate เป็น UTC
-        /* DateTime utcBirthDate = TimeZoneInfo.ConvertTimeToUtc(DateTime.Parse(req.BirthDate!), localeTimeZone); */ //วันเกิดเก็บเวลา locale ก็ได้ (เวลาไม่มีผล)
-
         var newUser = new UserModel
         {
             FirstName = req.FirstName,
@@ -138,64 +135,67 @@ public class AccountsController(UserManager<UserModel> userManager, TokenHelper 
     }
 
 
-    [HttpPut("UserManage")]
-    [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> BlockedUser(ManageUserDTO req)
-    {
-        try
-        {
-            UserModel? targetUser = await _userManager.FindByIdAsync(req.TargetUserId!);
-            var userRole = await _userManager.GetRolesAsync(targetUser!);
-            if (userRole.Any(role => role == "Admin") && req.Blocked == true)
-            {
-                var errors = new[] { "ไม่สามารถระงับผู้ใช้งานที่เป็น Admin ได้" };
-                return BadRequest(new { Errors = errors });
-            }
-            if (targetUser == null) return NotFound();
-            targetUser.Blocked = req.Blocked;
-            await _userManager.UpdateAsync(targetUser);
-            return NoContent();
-        }
-        catch (Exception ex)
-        {
-            var errors = new[] { ex.Message };
-            return BadRequest(new { Errors = errors });
-        }
-    }
-    [HttpGet("AllUser")]
-    [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> getAllUser()
-    {
-        try
-        {
-            List<AllUserDTO> users = await _userManager.Users.Select(user => new AllUserDTO
-            {
-                UserID = user.Id,
-                UserImageURL = user.UserImageURL,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Email = user.Email,
-                PhoneNumber = user.PhoneNumber,
-                Gender = user.Gender,
-                BirthDate = user.BirthDate,
-                Addresses = user.Addresses.Select(a => new AddressDTO
-                {
-                    AddressId = a.Id,
-                    AddressName = a.Name,
-                    ReceiverName = a.Receiver,
-                    ReceiverPhoneNumber = a.PhoneNumber,
-                    AddressInfo = a.AddressInfo,
-                    IsDefault = a.IsDefault,
-                }).ToList(),
-                Blocked = user.Blocked,
-            }).ToListAsync();
-            return Ok(users);
-        }
-        catch (Exception ex)
-        {
-            var errors = new[] { ex.Message };
-            return BadRequest(new { Errors = errors });
-        }
-    }
+    ////////////////////////////หน้า admin (ทำไม่ทัน)///////////////////////////////
+
+    /*    [HttpPut("UserManage")]
+       [Authorize(Roles = "Admin")]
+       public async Task<IActionResult> BlockedUser(ManageUserDTO req)
+       {
+           try
+           {
+               UserModel? targetUser = await _userManager.FindByIdAsync(req.TargetUserId!);
+               var userRole = await _userManager.GetRolesAsync(targetUser!);
+               if (userRole.Any(role => role == "Admin") && req.Blocked == true)
+               {
+                   var errors = new[] { "ไม่สามารถระงับผู้ใช้งานที่เป็น Admin ได้" };
+                   return BadRequest(new { Errors = errors });
+               }
+               if (targetUser == null) return NotFound();
+               targetUser.Blocked = req.Blocked;
+               await _userManager.UpdateAsync(targetUser);
+               return NoContent();
+           }
+           catch (Exception ex)
+           {
+               var errors = new[] { ex.Message };
+               return BadRequest(new { Errors = errors });
+           }
+       }
+
+       [HttpGet("AllUser")]
+       [Authorize(Roles = "Admin")]
+       public async Task<IActionResult> getAllUser()
+       {
+           try
+           {
+               List<AllUserDTO> users = await _userManager.Users.Select(user => new AllUserDTO
+               {
+                   UserID = user.Id,
+                   UserImageURL = user.UserImageURL,
+                   FirstName = user.FirstName,
+                   LastName = user.LastName,
+                   Email = user.Email,
+                   PhoneNumber = user.PhoneNumber,
+                   Gender = user.Gender,
+                   BirthDate = user.BirthDate,
+                   Addresses = user.Addresses.Select(a => new AddressDTO
+                   {
+                       AddressId = a.Id,
+                       AddressName = a.Name,
+                       ReceiverName = a.Receiver,
+                       ReceiverPhoneNumber = a.PhoneNumber,
+                       AddressInfo = a.AddressInfo,
+                       IsDefault = a.IsDefault,
+                   }).ToList(),
+                   Blocked = user.Blocked,
+               }).ToListAsync();
+               return Ok(users);
+           }
+           catch (Exception ex)
+           {
+               var errors = new[] { ex.Message };
+               return BadRequest(new { Errors = errors });
+           }
+       } */
 
 }

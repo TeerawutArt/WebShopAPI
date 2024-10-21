@@ -310,67 +310,7 @@ public class OrdersController(AppDbContext appDbContext, UserManager<UserModel> 
         }
     }
 
-    [HttpGet("Manage")]
-    [Authorize(Roles = "Sale,Admin")]
-    public async Task<IActionResult> GetOrdersForAdmin()
-    {
-        try
-        {
-            UserModel? user = await _userManager.FindByIdAsync(User.FindFirstValue("uid")!);
-            if (user is null)
-            {
-                var errors = new[] { "Invalid request or no permission" };
-                return BadRequest(new { Errors = errors });
-            }
-            var userRole = await _userManager.GetRolesAsync(user);
-            if (userRole.Any(role => role == "Admin") || userRole.Any(role => role == "Sale"))
-            {
-                //staff or admin role ShowAllOrder
-                List<OrderDTO> orders = await _appDbContext.Orders.Include(o => o.Users).Select(order => new OrderDTO
-                {
-                    OrderId = order.Id,
-                    UserId = order.UserId,
-                    OrderUserName = order.Users!.FirstName + ' ' + order.Users.LastName,
-                    OrderTime = TimeZoneInfo.ConvertTimeFromUtc(order.OrderTimeUTC, localeTimeZone),
-                    ExpiryTime = TimeZoneInfo.ConvertTimeFromUtc(order.ExpiryTimeUTC, localeTimeZone),
-                    TransactionTime = TimeZoneInfo.ConvertTimeFromUtc(order.TransactionTimeUTC, localeTimeZone),
-                    IsPaid = order.IsPaid,
-                    UsedCoupon = order.UsedCoupon,
-                    Status = order.Status,
-                    TransportInfo = order.TransportInfo,
-                    TransportPrice = order.TransportPrice,
-                    TotalPrice = order.TotalPrice,
-                    NetPrice = order.NetPrice,
-                }).ToListAsync();
-                //เหมือน db sqlite จะ loop ใน _appdb.. toListAsync ไม่ได้ ต้องแยก
-                orders.ForEach(os =>
-                {
-                    os.OrderProducts = _appDbContext.Orders.Where(o => o.UserId == user.Id && o.Id == os.OrderId).SelectMany(o => o.OrderProducts).Select(p => new OrderProductDTO
-                    {
-                        OrderId = p.OrderId,
-                        ProductId = p.ProductId,
-                        ProductName = p.Product!.Name,
-                        ProductImageURL = p.Product!.ProductImageURL,
-                        UnitPrice = p.UnitPrice,
-                        ProductQuantity = p.Quantity,
-                        NetPrice = p.NetPrice,
-                    }).ToList();
-                });
-                return Ok(orders);
-            }
-            else
-            {//ดักไว้
-                var errors = new[] { "Invalid request or no permission" };
-                return BadRequest(new { Errors = errors });
-            }
-        }
-        catch (Exception ex)
-        {
-            var errors = new[] { ex.Message };
-            return BadRequest(new { Errors = errors });
-        }
 
-    }
 
     [HttpPost("Confirm")]
     [Authorize]
@@ -507,5 +447,69 @@ public class OrdersController(AppDbContext appDbContext, UserManager<UserModel> 
         }
 
     }
+
+    ///////////////////////////////////////////
+    /* หน้า Admin (ทำไม่ทัน) */
+    /*     [HttpGet("Manage")]
+        [Authorize(Roles = "Sale,Admin")]
+        public async Task<IActionResult> GetOrdersForAdmin()
+        {
+            try
+            {
+                UserModel? user = await _userManager.FindByIdAsync(User.FindFirstValue("uid")!);
+                if (user is null)
+                {
+                    var errors = new[] { "Invalid request or no permission" };
+                    return BadRequest(new { Errors = errors });
+                }
+                var userRole = await _userManager.GetRolesAsync(user);
+                if (userRole.Any(role => role == "Admin") || userRole.Any(role => role == "Sale"))
+                {
+                    //staff or admin role ShowAllOrder
+                    List<OrderDTO> orders = await _appDbContext.Orders.Include(o => o.Users).Select(order => new OrderDTO
+                    {
+                        OrderId = order.Id,
+                        UserId = order.UserId,
+                        OrderUserName = order.Users!.FirstName + ' ' + order.Users.LastName,
+                        OrderTime = TimeZoneInfo.ConvertTimeFromUtc(order.OrderTimeUTC, localeTimeZone),
+                        ExpiryTime = TimeZoneInfo.ConvertTimeFromUtc(order.ExpiryTimeUTC, localeTimeZone),
+                        TransactionTime = TimeZoneInfo.ConvertTimeFromUtc(order.TransactionTimeUTC, localeTimeZone),
+                        IsPaid = order.IsPaid,
+                        UsedCoupon = order.UsedCoupon,
+                        Status = order.Status,
+                        TransportInfo = order.TransportInfo,
+                        TransportPrice = order.TransportPrice,
+                        TotalPrice = order.TotalPrice,
+                        NetPrice = order.NetPrice,
+                    }).ToListAsync();
+                    //เหมือน db sqlite จะ loop ใน _appdb.. toListAsync ไม่ได้ ต้องแยก
+                    orders.ForEach(os =>
+                    {
+                        os.OrderProducts = _appDbContext.Orders.Where(o => o.UserId == user.Id && o.Id == os.OrderId).SelectMany(o => o.OrderProducts).Select(p => new OrderProductDTO
+                        {
+                            OrderId = p.OrderId,
+                            ProductId = p.ProductId,
+                            ProductName = p.Product!.Name,
+                            ProductImageURL = p.Product!.ProductImageURL,
+                            UnitPrice = p.UnitPrice,
+                            ProductQuantity = p.Quantity,
+                            NetPrice = p.NetPrice,
+                        }).ToList();
+                    });
+                    return Ok(orders);
+                }
+                else
+                {//ดักไว้
+                    var errors = new[] { "Invalid request or no permission" };
+                    return BadRequest(new { Errors = errors });
+                }
+            }
+            catch (Exception ex)
+            {
+                var errors = new[] { ex.Message };
+                return BadRequest(new { Errors = errors });
+            }
+
+        } */
 }
 

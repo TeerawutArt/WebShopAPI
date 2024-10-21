@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using WebShoppingAPI.DTOs.Request;
 using WebShoppingAPI.DTOs.Request.Coupon;
+using WebShoppingAPI.DTOs.Response;
 using WebShoppingAPI.DTOs.Response.Coupon;
 using WebShoppingAPI.Helpers;
 using WebShoppingAPI.Models;
@@ -68,7 +69,7 @@ public class CouponsController(AppDbContext appDbContext, UserManager<UserModel>
 
     [HttpGet]
     [Authorize]
-    public async Task<IActionResult> GetCoupons([FromQuery] KeyWordsDTO req)
+    public async Task<IActionResult> GetCoupons([FromQuery] DefaultPagingDTO req)
     {
         try
         {
@@ -78,13 +79,18 @@ public class CouponsController(AppDbContext appDbContext, UserManager<UserModel>
                 var errors = new[] { "Invalid request or no permission" };
                 return BadRequest(new { Errors = errors });
             }
+
             var query = _appDbContext.Coupons.AsQueryable();
+            var pageIndex = req.PageIndex;
+            var pageSize = req.PageSize;
+            var skipRecords = (pageIndex - 1) * pageSize;
+            var totalRecords = await _appDbContext.Coupons.CountAsync();
             if (!string.IsNullOrWhiteSpace(req.Keyword)) //IsNullOrWhiteSpace คือ ไม่เอา spacebar ด้วย
             {
                 query = query.Where(e => e.Name!.ToLower().Contains(req.Keyword.ToLower())  //Contains มีอักษรบางส่วน
                 || e.Code!.ToLower().Contains(req.Keyword.ToLower()));
             }
-            var coupon = await query.Select(d => new GetCouponsDTO
+            var coupon = await query.Skip(skipRecords).Take(pageSize).Select(d => new GetCouponsDTO
             {
                 CouponId = d.Id,
                 CouponName = d.Name,
@@ -100,7 +106,12 @@ public class CouponsController(AppDbContext appDbContext, UserManager<UserModel>
                 IsDiscountPercent = d.IsDiscountPercent,
                 IsCouponAvailable = d.IsAvailable
             }).ToListAsync();
-            return Ok(coupon);
+            var res = new PagingDTO<GetCouponsDTO>
+            {
+                TotalRecords = totalRecords,
+                Items = coupon
+            };
+            return Ok(res);
         }
 
         catch (Exception ex)
