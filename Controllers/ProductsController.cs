@@ -34,6 +34,7 @@ public class ProductsController(AppDbContext appDbContext, FileService fileServi
     {
         try
         {
+
             var query = _appDbContext.Products.AsQueryable();
             var curDate = DateTime.UtcNow;
             UserModel? user = await userManager.FindByIdAsync(User.FindFirstValue("uid")!);
@@ -53,6 +54,10 @@ public class ProductsController(AppDbContext appDbContext, FileService fileServi
                 {
                     query = query.Where(e => e.IsAvailable == true);
                 }
+            }
+            if (req.CategoryId != null)
+            {
+                query = query.Where(pc => pc.ProductCategories.Any(p => p.CategoryId == req.CategoryId));
             }
             if (!string.IsNullOrWhiteSpace(req.Keyword)) //IsNullOrWhiteSpace คือ ไม่เอา spacebar ด้วย
             {
@@ -107,7 +112,6 @@ public class ProductsController(AppDbContext appDbContext, FileService fileServi
             var errors = new[] { ex.Message };
             return BadRequest(new { Errors = errors });
         }
-
 
     }
 

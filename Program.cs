@@ -40,7 +40,7 @@ services.AddIdentity<UserModel, RoleModel>(options =>
 }).AddEntityFrameworkStores<AppDbContext>()
 .AddDefaultTokenProviders(); // gen token สำหรับ forgot password
 
-///////////corss-origin/////////////////
+///////////cross-origin/////////////////
 services.AddCors(options =>
 {
     options.AddPolicy("MyCors", config =>

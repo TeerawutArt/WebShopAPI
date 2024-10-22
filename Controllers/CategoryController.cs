@@ -22,7 +22,28 @@ public class CategoryController(AppDbContext appDbContext) : ControllerBase
 
 
     [HttpGet]
-    public async Task<IActionResult> GetCategory([FromQuery] DefaultPagingDTO req)
+    public async Task<IActionResult> GetCategory()
+    {
+        try
+        {
+            var categories = await _appDbContext.Categories.Select(c => new CategoriesDTO
+            {
+                Name = c.Name,
+                Code = c.NormalizedName,
+                Description = c.Description,
+                Id = c.Id
+            }).ToListAsync();
+            return Ok(categories);
+        }
+        catch (Exception ex)
+        {
+            var errors = new[] { ex.Message };
+            return BadRequest(new { Errors = errors });
+        }
+    }
+
+    [HttpGet("Paging")]
+    public async Task<IActionResult> GetCategoryPaging([FromQuery] DefaultPagingDTO req)
     {
         try
         {

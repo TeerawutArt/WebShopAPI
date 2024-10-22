@@ -8,6 +8,7 @@ public class GetProductsDTO
     public bool ManageProductMode { get; set; }
     public bool HideDisableProduct { get; set; }
     public string? Keyword { get; set; }
+    public Guid? CategoryId { get; set; }
 
     [Range(1, 1000)] //กำหนดขอบเขต ของ PageIndex
     public int PageIndex { get; set; } = 1;
