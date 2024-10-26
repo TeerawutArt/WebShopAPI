@@ -64,25 +64,25 @@ FileService fileService, IConfiguration iConfiguration) : ControllerBase
     [Consumes("multipart/form-data")]
     public async Task<IActionResult> UpdateUser(UpdateUserDTO req)
     {
-        var userId = User.FindFirstValue("uid");
-        UserModel? user = await _userManager.FindByIdAsync(userId!);
-        if (user is null)
+        try
         {
-            var errors = new[] { "Invalid request or no permission" };
-            return BadRequest(new { Errors = errors });
-        }
-
-        if (req.UserImage is not null)
-        {
-            try
+            var userId = User.FindFirstValue("uid");
+            UserModel? user = await _userManager.FindByIdAsync(userId!);
+            if (user is null)
             {
+                var errors = new[] { "Invalid request or no permission" };
+                return BadRequest(new { Errors = errors });
+            }
+
+            if (req.UserImage is not null)
+            {
+
                 if (req.UserImage!.Length > 1 * 1024 * 1024) return StatusCode(StatusCodes.Status400BadRequest, "ขนาดไฟล์รูปต้องไม่ใหญ่เกิน 1 MB");
                 string[] allowFileExtensions = [".jpg", ".jpeg", ".png"];
                 string createdImageName = await _fileService.SaveFileAsync(req.UserImage!, allowFileExtensions);
                 //ลบรูปเก่าที่อยู่ในโฟล์เดอร์ "UploadImage" ยกเว้นรูปตั้งต้น
                 if (user.UserImageURL != defaultImageURLForUser) _fileService.DeleteFile(user.UserImageURL!);
                 //อัปเดทข้อมูล user
-
                 user.Email = req.Email;
                 user.FirstName = req.FirstName;
                 user.LastName = req.LastName;
@@ -90,24 +90,29 @@ FileService fileService, IConfiguration iConfiguration) : ControllerBase
                 user.PhoneNumber = req.PhoneNumber;
                 user.Gender = req.Gender;
                 user.UserImageURL = createdImageName;
+
             }
-            catch (Exception ex)
+            else
             {
-                var errors = new[] { ex.Message };
-                return BadRequest(new { Errors = errors });
+                user.Email = req.Email;
+                user.FirstName = req.FirstName;
+                user.LastName = req.LastName;
+                user.BirthDate = DateTime.Parse(req.BirthDate!);
+                user.PhoneNumber = req.PhoneNumber;
+                user.Gender = req.Gender;
             }
+            await _userManager.UpdateAsync(user);
+            var newUserImage = new UpdateUserProfileDTO { UserImageURL = user.UserImageURL };
+            return Ok(newUserImage); //ส่งลิงค์รูปออกไป
         }
-        else
+        catch (Exception ex)
         {
-            user.Email = req.Email;
-            user.FirstName = req.FirstName;
-            user.LastName = req.LastName;
-            user.BirthDate = DateTime.Parse(req.BirthDate!);
-            user.PhoneNumber = req.PhoneNumber;
-            user.Gender = req.Gender;
+            var errors = new[] { ex.Message };
+            return BadRequest(new
+            {
+                Errors = errors
+            });
         }
-        await _userManager.UpdateAsync(user);
-        return NoContent();
     }
 
 
