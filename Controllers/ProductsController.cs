@@ -34,6 +34,7 @@ public class ProductsController(AppDbContext appDbContext, FileService fileServi
     {
         try
         {
+
             var query = _appDbContext.Products.AsQueryable();
             var curDate = DateTime.UtcNow;
             UserModel? user = await userManager.FindByIdAsync(User.FindFirstValue("uid")!);
@@ -53,6 +54,10 @@ public class ProductsController(AppDbContext appDbContext, FileService fileServi
                 {
                     query = query.Where(e => e.IsAvailable == true);
                 }
+            }
+            if (req.CategoryId != null)
+            {
+                query = query.Where(pc => pc.ProductCategories.Any(p => p.CategoryId == req.CategoryId));
             }
             if (!string.IsNullOrWhiteSpace(req.Keyword)) //IsNullOrWhiteSpace คือ ไม่เอา spacebar ด้วย
             {
@@ -108,7 +113,6 @@ public class ProductsController(AppDbContext appDbContext, FileService fileServi
             return BadRequest(new { Errors = errors });
         }
 
-
     }
 
     [HttpGet("{id}")]
@@ -116,84 +120,40 @@ public class ProductsController(AppDbContext appDbContext, FileService fileServi
     {
         try
         {
+            var products = await _appDbContext.Products.Where(p => p.Id == id).Include(p => p.Discount).Select(row => new ProductDTO
+            {
+                ProductId = row.Id,
+                ProductImageURL = row.ProductImageURL,
+                ProductName = row.Name,
+                ProductDescription = row.Description,
+                ProductTotalAmount = row.TotalAmount,
+                ProductSoldAmount = row.SoldAmount,
+                ProductCreatedBy = row.CreatedBy,
+                ProductCreatedTime = row.CreatedTimeUTC,
+                Price = row.Price,
+                DiscountPrice = row.DiscountPrice,
+                TotalScore = row.TotalScore,
+                IsAvailable = row.IsAvailable,
+                IsDiscounted = row.Discount != null ? row.Discount.IsDiscounted : false,
+                DiscountStartDate = row.Discount != null ? row.Discount.StartTimeUTC : new DateTime(),
+                DiscountEndDate = row.Discount != null ? row.Discount.EndTimeUTC : new DateTime(),
+                IsDiscountPercent = row.Discount != null ? row.Discount.IsDiscountPercent : false,
+                DiscountRate = row.Discount != null ? row.Discount.DiscountRate : 0,
+                Categories = row.ProductCategories.Select(pc => new CategoriesDTO
+                {
+                    Name = pc.Category!.Name,
+                    Code = pc.Category.NormalizedName,
+                }).ToList()
+            }).ToListAsync();
+            //แปลงเวลากลับจาก UTC กลับเป็น locale
+            foreach (var item in products)
+            {
+                item.ProductCreatedTime = TimeZoneInfo.ConvertTimeFromUtc(item.ProductCreatedTime, localeTimeZone);
+                item.DiscountStartDate = TimeZoneInfo.ConvertTimeFromUtc(item.DiscountStartDate, localeTimeZone);
+                item.DiscountEndDate = TimeZoneInfo.ConvertTimeFromUtc(item.DiscountEndDate, localeTimeZone);
+            }
+            return Ok(products);
 
-            UserModel? user = await userManager.FindByIdAsync(User.FindFirstValue("uid")!);
-            if (user is null)
-            {
-                var errors = new[] { "Invalid request or no permission" };
-                return BadRequest(new { Errors = errors });
-            }
-            var userRole = await userManager.GetRolesAsync(user!);
-            //ตรวจสอบ Product ว่ามีอยู่ไหม (role customer ไม่โชว์ หรือติ้กไม่โชว์)
-            if (userRole.Any(role => role == "Customer"))
-            {
-                var products = await _appDbContext.Products.Where(p => p.Id == id).Include(p => p.Discount).Select(row => new ProductDTO
-                {
-                    ProductId = row.Id,
-                    ProductImageURL = row.ProductImageURL,
-                    ProductName = row.Name,
-                    ProductDescription = row.Description,
-                    ProductTotalAmount = row.TotalAmount,
-                    ProductSoldAmount = row.SoldAmount,
-                    Price = row.Price,
-                    DiscountPrice = row.DiscountPrice,
-                    TotalScore = row.TotalScore,
-                    IsAvailable = row.IsAvailable,
-                    IsDiscounted = row.Discount != null ? row.Discount.IsDiscounted : false,
-                    DiscountStartDate = row.Discount != null ? row.Discount.StartTimeUTC : new DateTime(),
-                    DiscountEndDate = row.Discount != null ? row.Discount.EndTimeUTC : new DateTime(),
-                    IsDiscountPercent = row.Discount != null ? row.Discount.IsDiscountPercent : false,
-                    DiscountRate = row.Discount != null ? row.Discount.DiscountRate : 0,
-                    Categories = row.ProductCategories.Select(pc => new CategoriesDTO
-                    {
-                        Id = pc.Category!.Id,
-                        Name = pc.Category!.Name,
-                        Code = pc.Category.NormalizedName,
-                    }).ToList()
-                }).ToListAsync();
-                foreach (var item in products)
-                {
-                    item.DiscountStartDate = TimeZoneInfo.ConvertTimeFromUtc(item.DiscountStartDate, localeTimeZone);
-                    item.DiscountEndDate = TimeZoneInfo.ConvertTimeFromUtc(item.DiscountEndDate, localeTimeZone);
-                }
-                return Ok(products);
-            }
-            else
-            {
-                var products = await _appDbContext.Products.Where(p => p.Id == id).Include(p => p.Discount).Select(row => new ProductDTO
-                {
-                    ProductId = row.Id,
-                    ProductImageURL = row.ProductImageURL,
-                    ProductName = row.Name,
-                    ProductDescription = row.Description,
-                    ProductTotalAmount = row.TotalAmount,
-                    ProductSoldAmount = row.SoldAmount,
-                    ProductCreatedBy = row.CreatedBy,
-                    ProductCreatedTime = row.CreatedTimeUTC,
-                    Price = row.Price,
-                    DiscountPrice = row.DiscountPrice,
-                    TotalScore = row.TotalScore,
-                    IsAvailable = row.IsAvailable,
-                    IsDiscounted = row.Discount != null ? row.Discount.IsDiscounted : false,
-                    DiscountStartDate = row.Discount != null ? row.Discount.StartTimeUTC : new DateTime(),
-                    DiscountEndDate = row.Discount != null ? row.Discount.EndTimeUTC : new DateTime(),
-                    IsDiscountPercent = row.Discount != null ? row.Discount.IsDiscountPercent : false,
-                    DiscountRate = row.Discount != null ? row.Discount.DiscountRate : 0,
-                    Categories = row.ProductCategories.Select(pc => new CategoriesDTO
-                    {
-                        Name = pc.Category!.Name,
-                        Code = pc.Category.NormalizedName,
-                    }).ToList()
-                }).ToListAsync();
-                //แปลงเวลากลับจาก UTC กลับเป็น locale
-                foreach (var item in products)
-                {
-                    item.ProductCreatedTime = TimeZoneInfo.ConvertTimeFromUtc(item.ProductCreatedTime, localeTimeZone);
-                    item.DiscountStartDate = TimeZoneInfo.ConvertTimeFromUtc(item.DiscountStartDate, localeTimeZone);
-                    item.DiscountEndDate = TimeZoneInfo.ConvertTimeFromUtc(item.DiscountEndDate, localeTimeZone);
-                }
-                return Ok(products);
-            }
         }
         catch (Exception ex)
         {

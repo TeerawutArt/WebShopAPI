@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+﻿/* using System.Security.Claims;
 using WebShoppingAPI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -203,3 +203,4 @@ public class ReviewCommentsController(AppDbContext appDbContext, UserManager<Use
 
 }
 
+ */
