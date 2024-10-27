@@ -93,7 +93,7 @@ public class CartsController(AppDbContext appDbContext, UserManager<UserModel> u
                 Description = p.Product.Description,
                 ProductPrice = p.Product!.Price,
                 ProductTotalAmount = p.Product.TotalAmount,
-                DiscountId = p.Product.DiscountId, //ใช้แทน IsDiscount ได้อยู่ (ไว้เป็นเงื่อนไขแสดงผลลัพธ์หน้าบ้าน)
+                DiscountId = p.Product.DiscountId,
                 ProductDiscountPrice = p.Product!.DiscountPrice,
                 Quantity = p.Product.TotalAmount > p.Quantity ? p.Quantity : p.Product.TotalAmount
             }).ToList();
